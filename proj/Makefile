@@ -20,7 +20,7 @@ ifeq ($(OS), Darwin)
 	CL_FLAGS=-I/usr/local/share/cuda/include/
 endif
 
-.PHONY: all clean edit
+.PHONY: all clean edit $(BIN)
 
 
 
@@ -28,13 +28,14 @@ endif
 
 all: $(BIN)$(PROJ)
 
-$(BIN)%.o: $(SRC)%.cpp
+$(BIN)%.o: $(SRC)%.cpp $(BIN)
 	$(CC) -c $(FLAGS) $< -o $@
 
-$(BIN)$(PROJ): $(OBJS) 
+$(BIN)$(PROJ): $(OBJS)
 	$(CC) $(FLAGS) $(OBJS) -o $(BIN)$(PROJ) $(CL_LAGS) $(LIBS)
 
-
+$(BIN):
+	$(shell mkdir $(BIN))
 
 
 
