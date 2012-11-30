@@ -11,13 +11,15 @@ PROJ  = jpeg_conv
 SRC   = src/
 BIN   = bin/
 FLAGS = -std=c++98 -Wall -pedantic -w
-
+CC    = g++
 OBJS  = $(shell ls src/*cpp | sed s/src/bin/g | sed s/cpp/o/g) 
 
 ifeq ($(OS), Darwin)
-	CC=g++
 	LIBS=-framework OpenCL
 	CL_FLAGS=-I/usr/local/share/cuda/include/
+else
+	LIBS=-lOpenCL
+	CL_FLAGS=-L/opt/AMDAPP/lib/ -I/opt/AMDAPP/include/
 endif
 
 .PHONY: all clean edit $(BIN)
