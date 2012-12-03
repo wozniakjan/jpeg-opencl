@@ -23,15 +23,204 @@ Na vstupu mame soubor TGA typu 24 bpp - truecolor bez alfa kanalu.
 
 using namespace std;
 
+#define BLOCK 1
+
 typedef struct {
-  int   width;
-  int   height;
+  unsigned int   width;
+  unsigned int   height;
   unsigned char *pixels; // 0-255
 } pixmap;
 
 
+
+pixmap* createPixmap(unsigned int width, unsigned int height, unsigned int bytespp) {
+    pixmap *p;
+    unsigned int size;
+
+    // malloc for pixmap header
+    p = (pixmap*) malloc(sizeof(pixmap));
+    if (p == NULL) {
+      cerr << "malloc error (pixman header)" << endl;
+      return NULL;
+    }
+    
+    p->width  = width;
+    p->height = height;
+    size = width*height*bytespp;  // each pixel 3 bytes
+    
+    // malloc for pixels
+    p->pixels = (unsigned char *) malloc(sizeof(unsigned char)*size);
+    if (p == NULL) {
+      cerr << "malloc error (pixels)" << endl;
+      return NULL;
+    }
+    return p;
+}
+
+
+unsigned char getR(pixmap *data, unsigned int x, unsigned int y) {
+    if (x >= data->width) {
+      x = data->width - 1;
+    }
+    if (y >= data->height) {
+      y = data->height - 1;
+    }
+    
+    return *(data->pixels + 3 * (y * data->width + x));
+}
+
+unsigned char getG(pixmap *data, unsigned int x, unsigned int y) {
+    if (x >= data->width) {
+      x = data->width - 1;
+    }
+    if (y >= data->height) {
+      y = data->height - 1;
+    }
+    
+    return *(data->pixels + 3 * (y * data->width + x) + 1);
+}
+
+unsigned char getB(pixmap *data, unsigned int x, unsigned int y) {
+    if (x >= data->width) {
+      x = data->width - 1;
+    }
+    if (y >= data->height) {
+      y = data->height - 1;
+    }
+    
+    return *(data->pixels + 3 * (y * data->width + x) + 2);
+}
+
+
+/* -------------------------------------------------------------- */
+
+ /*
+   Block 2x2:
+    _____________________
+   | r1 g1 b1 | r2 g2 b2 |
+   |---------------------|
+   | r3 g3 b3 | r4 g4 b4 |
+    ----------------------
+ */
+
+unsigned char getAvgR(pixmap *data, unsigned int x, unsigned int y) {
+    if (x >= data->width) {
+      x = data->width - 1;
+    }
+    if (y >= data->height) {
+      y = data->height - 1;
+    }
+    
+    unsigned char r1, r2, r3, r4;
+    
+    r1 = *(data->pixels + 3 * (y * data->width + x));
+    r2 = *(data->pixels + 3 * (y * data->width + x) + 3);
+    r3 = *(data->pixels + 3 * ((y+1) * data->width + x));
+    r4 = *(data->pixels + 3 * ((y+1) * data->width + x) + 3);            
+    
+    return ((r1 + r2 + r3 + r4)/4);
+}
+
+unsigned char getAvgG(pixmap *data, unsigned int x, unsigned int y) {
+    if (x >= data->width) {
+      x = data->width - 1;
+    }
+    if (y >= data->height) {
+      y = data->height - 1;
+    }
+    
+    unsigned char r1, r2, r3, r4;
+    
+    r1 = *(data->pixels + 3 * (y * data->width + x) + 1);
+    r2 = *(data->pixels + 3 * (y * data->width + x) + 4);
+    r3 = *(data->pixels + 3 * ((y+1) * data->width + x) + 1);
+    r4 = *(data->pixels + 3 * ((y+1) * data->width + x) + 4);            
+    
+    return ((r1 + r2 + r3 + r4)/4);
+}
+
+unsigned char getAvgB(pixmap *data, unsigned int x, unsigned int y) {
+    if (x >= data->width) {
+      x = data->width - 1;
+    }
+    if (y >= data->height) {
+      y = data->height - 1;
+    }
+    
+    unsigned char r1, r2, r3, r4;
+    
+    r1 = *(data->pixels + 3 * (y * data->width + x) + 2);
+    r2 = *(data->pixels + 3 * (y * data->width + x) + 5);
+    r3 = *(data->pixels + 3 * ((y+1) * data->width + x) + 2);
+    r4 = *(data->pixels + 3 * ((y+1) * data->width + x) + 5);            
+    
+    return ((r1 + r2 + r3 + r4)/4);
+}
+
+/* -------------------------------------------------------------- */
+
+pixmap* reduce_colors(pixmap *data) {
+    unsigned int i, j;
+
+    pixmap *dest;
+    dest = createPixmap(data->width, data->height, 3);
+    
+    // for all rows of the pixmap
+    for (j = 0; j < data->height; j++) {
+        unsigned char *p_dest = dest->pixels + 3 * j * dest->width;
+        
+        // for all pixels in the row
+        for (i = 0; i < data->width; i++) {
+            float r, g, b, rr, gg, bb, y, cb, cr;
+
+            r = getR(data, i, j);
+            g = getG(data, i, j);
+            b = getB(data, i, j);
+
+            /*
+            // souradnice zarovnane na zacatek bloku
+            int ii = i & (~BLOCK);
+            int jj = j & (~BLOCK);
+
+            rr = getAvgR(data, ii, jj);
+            gg = getAvgG(data, ii, jj);
+            bb = getAvgB(data, ii, jj);
+            */
+            
+            // picks r, g, b from one pixel of a block
+            rr = getR(data, i, j);
+            gg = getG(data, i, j);
+            bb = getB(data, i, j);
+            
+            // RGB>YCbCr
+            y  =  0.299  * r  + 0.587  * g  + 0.114  *b;
+            cb = -0.1687 * rr - 0.3313 * gg + 0.5    *bb + 128;
+            cr =  0.5    * rr - 0.4187 * gg - 0.0813 *bb + 128;
+
+            // YCbCr > RGB (for saving the image)
+            r = y                     + 1.402  * (cr - 128);
+            g = y -0.34414 * (cb - 128) - 0.71414* (cr - 128);
+            b = y +1.772   * (cb - 128);
+
+            if (r>255) r = 255;
+            if (g>255) g = 255;
+            if (b>255) b = 255;
+            if (r<0) r = 0;
+            if (g<0) g = 0;
+            if (b<0) b = 0;
+            
+            *p_dest++ = (unsigned char) r;  // bytes
+            *p_dest++ = (unsigned char) g;
+            *p_dest++ = (unsigned char) b;
+        }
+    }
+    
+    return dest;
+}
+
+
 void rgb_to_ycbcr(pixmap * Y, pixmap *Cb, pixmap *Cr, pixmap *data) {
-    int i, j;
+    unsigned int i, j;
     
     // for all rows of the pixmap
     for (j=0; j < data->height; j++) {
@@ -60,31 +249,6 @@ void rgb_to_ycbcr(pixmap * Y, pixmap *Cb, pixmap *Cr, pixmap *data) {
     
     }
     
-}
-
-
-pixmap* createPixmap(unsigned int width, unsigned int height, unsigned int bytespp) {
-    pixmap *p;
-    unsigned int size;
-
-    // malloc for pixmap header
-    p = (pixmap*) malloc(sizeof(pixmap));
-    if (p == NULL) {
-      cerr << "malloc error (pixman header)" << endl;
-      return NULL;
-    }
-    
-    p->width  = width;
-    p->height = height;
-    size = width*height*bytespp;  // each pixel 3 bytes
-    
-    // malloc for pixels
-    p->pixels = (unsigned char *) malloc(sizeof(unsigned char)*size);
-    if (p == NULL) {
-      cerr << "malloc error (pixels)" << endl;
-      return NULL;
-    }
-    return p;
 }
 
 
@@ -194,7 +358,7 @@ void saveGrayscalePixmap(pixmap *data, const char *imgname) {
                         0x20                    // bitmap orientation
     };
 
-        cout << " name:  " << imgname << endl << " width:  " << data->width << endl << " height: " << data->height << endl << " bpp:    " << 8 << endl;
+    cout << " name:  " << imgname << endl << " width:  " << data->width << endl << " height: " << data->height << endl << " bpp:    " << 8 << endl;
         
     memcpy(tgaHeader+12, &(data->width), 2);  
     memcpy(tgaHeader+14, &(data->height), 2);
@@ -207,33 +371,90 @@ void saveGrayscalePixmap(pixmap *data, const char *imgname) {
     
     fwrite(tgaHeader, 18, 1, f);  // write the header
 
-    for (i = data->height; i; i--) {                 // radky zapisovat v opacnem poradi
-        unsigned int yoff = (i-1) * data->width;       // y-ovy offset v poli
-        fwrite((const void *)(data->pixels+yoff), (size_t)data->width, (size_t)1, f); // the whole row
+    // write rows in reverse order
+    for (i = data->height; i; i--) {
+        unsigned int yoff = (i-1) * data->width;       // y offset in array
+        fwrite((const void *)(data->pixels + yoff), (size_t)data->width, (size_t)1, f); // the whole row
     }
     
     fclose(f);
     cout << "pixmap saved. image created!" << endl;    
 }
 
-
-
-int main(int argc, char **argv)
+void saveTruecolorPixmap(pixmap *data, const char *imgname)
 {
+    FILE *f;
+    unsigned int i, j;
+    unsigned char tgaHeader[18]={
+                        0x00,                   // type of TGA header
+                        0x00,                   // we do not use palette
+                        0x02,                   // image type - TrueColor
+                        0x00, 0x00,             // palette length
+                        0x00, 0x00, 0x00,       // do not care about position in palette
+                        0x00, 0x00, 0x00, 0x00, // image is on position [0, 0]
+                        0x00, 0x00, 0x00, 0x00, // width and height (2B each)
+                        0x18,                   // 24 bits/px
+                        0x20                    // bitmap orientation
+    };
+
+    cout << " name:  " << imgname << endl << " width:  " << data->width << endl << " height: " << data->height << endl << " bpp:    " << 8 << endl;
+        
+    memcpy(tgaHeader+12, &(data->width), 2);
+    memcpy(tgaHeader+14, &(data->height), 2);
+
+    f = fopen(imgname, "wb");
+    if (f) {
+        fwrite(tgaHeader, 18, 1, f);  // write the header
+        // write rows in reverse order
+        for (i = data->height; i; i--) {
+            unsigned int yoff = 3 * (i-1) * data->width; // y offset in array
+            unsigned char *r = data->pixels + yoff;
+            
+            // RGB>BGR and write the row into file
+            for (j = 0; j < data->width; j++) {
+                int result;
+                result=fputc(*(r + 2), f); 
+                if (result == EOF) {
+                  cerr << "fputc error" << endl;
+                  return;
+                }
+                result=fputc(*(r + 1), f);
+                if (result == EOF) {
+                  cerr << "fputc error" << endl;
+                  return;
+                }
+                result=fputc(*(r), f);
+                if (result == EOF) {
+                  cerr << "fputc error" << endl;
+                  return;
+                }
+                r += 3;
+            }
+        }
+        fclose(f);
+    }
+
+    cout << "image created!" << endl;
+}
+
+
+int main(int argc, char **argv) {
   if (argc < 2) {
     cerr << "not enough arguments" << endl;
     return 1;
   }
   
   pixmap *data; 
-  pixmap *Y;
-  pixmap *Cb;
-  pixmap *Cr;
+  pixmap *dest;  
   
   data = loadTGAdata(argv[1]);
 
   cout << "w: " << data->width << " h: " << data->height << endl;
   
+  /*
+  pixmap *Y;
+  pixmap *Cb;
+  pixmap *Cr;
   
   Y  = createPixmap(data->width, data->height, 1); // 1 byte per pixel
   Cb = createPixmap(data->width, data->height, 1);
@@ -242,10 +463,12 @@ int main(int argc, char **argv)
   cout << "w: " << Y->width << " h: " << Y->height << endl;
   
   rgb_to_ycbcr(Y, Cb, Cr, data);
-  
   saveGrayscalePixmap( Y, "Y.tga");
   saveGrayscalePixmap(Cb, "Cb.tga");
-  saveGrayscalePixmap(Cr, "Cr.tga");
+  saveGrayscalePixmap(Cr, "Cr.tga"); */
+  
+  dest = reduce_colors(data);  
+  saveTruecolorPixmap(dest, "reduced.tga");
   
   return 0;
 }
