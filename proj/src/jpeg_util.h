@@ -9,6 +9,9 @@
 #include <vector>
 
 
+
+void test_zigzag();
+
 class Marker { 
     protected:
         char *data;     // Head[2] + payload[n]
@@ -45,14 +48,14 @@ class DQT : public Marker {
 // Baseline DCT, Start of Frame
 class SOF0 : public Marker {
     public:
+        SOF0(int lines, int rows);
         int length(int set_len=-1);
-        char precision(char set_prec=-1);
+        int precision(int set_prec=-1);
         int lines(int set_l=-1);
         int rows(int set_r=-1);
-        char component_count(char set_count=-1);
-        char sampling_factor(int component_id, char set_factor=-1);
-        char quant_table_id(int component_id, char set_qaunt_table_id=-1);
-        SOF0(char line_count0, char line_count1, char rows_count0, char rows_count1);
+        int component_count(int set_count=-1);
+        int sampling_factor(int component_id, int set_factor=-1);
+        int quant_table_id(int component_id, int set_qaunt_table_id=-1);
 };
 
 // Huffman Tables

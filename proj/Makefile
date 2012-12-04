@@ -18,8 +18,13 @@ ifeq ($(OS), Darwin)
 	LIBS=-framework OpenCL
 	CL_FLAGS=-I/usr/local/share/cuda/include/
 else
+ifeq ($(OS), CYGWIN_NT-5.1)
+	LIBS=
+	CL_FLAGS=
+else
 	LIBS=-lOpenCL
 	CL_FLAGS=-I/usr/local/share/cuda/include/ #-L/opt/AMDAPP/lib/ -I/opt/AMDAPP/include/
+endif
 endif
 
 .PHONY: all clean edit $(BIN)

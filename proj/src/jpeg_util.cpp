@@ -30,6 +30,96 @@ char chrominace_table[] = {
 
 
 
+void move_right(int* r, int* c, int r_count, int c_count, int* t, vector<int>* z){
+    int index = (*r)*c_count+(*c);
+    //cout << "r  [" << (*r) << ":" << (*c) << "] -> " << index << endl;
+    (*c)++;
+    z->push_back(t[index]);
+}
+
+void move_down(int* r, int* c, int r_count, int c_count, int* t, vector<int>* z){ 
+    int index = (*r)*c_count+(*c); 
+    //cout << "d  [" << (*r) << ":" << (*c) << "] -> " << index << endl;
+    (*r)++;
+    z->push_back(t[index]);
+}
+
+void move_diagonal_down(int* r, int* c, int r_count, int c_count, int* t, vector<int>* z){
+    int index = 0;
+    for(; (*r)<(r_count-1) && (*c)>0; (*r)++, (*c)--){
+        index = (*r)*c_count+(*c);
+        //cout << "dd [" << (*r) << ":" << (*c) << "] -> " << index << endl;
+        z->push_back(t[index]);
+    }
+}
+
+void move_diagonal_up(int* r, int* c, int r_count, int c_count, int* t, vector<int>* z){ 
+    int index = 0;
+    for(; (*r)>0 && (*c)<(c_count-1); (*r)--, (*c)++){
+        index = (*r)*c_count+(*c);
+        //cout << "du [" << (*r) << ":" << (*c) << "] -> " << index << endl;
+        z->push_back(t[index]);
+    }
+}
+
+void zig_zag(int* table, int* ziged, int rows, int cols){
+    if(ziged == NULL){
+        ziged = (int*)malloc(sizeof(int)*rows*cols);
+    }
+    
+    int max_index = rows+cols-2;
+    int r = 0;
+    int max_row = rows-1;
+    int c = 0;
+    int max_col = cols-1;
+    vector<int> aux_ziged;
+    
+    while(r+c < max_index){
+        if(c<max_col) {
+            move_right(&r,&c,rows,cols,table,&aux_ziged);
+        } else {
+            move_down(&r,&c,rows,cols,table,&aux_ziged);
+        }
+        
+        move_diagonal_down(&r,&c,rows,cols,table,&aux_ziged);
+        
+        if(r<max_row){
+            move_down(&r,&c,rows,cols,table,&aux_ziged);
+        } else {
+            move_right(&r,&c,rows,cols,table,&aux_ziged);
+        }
+        
+        move_diagonal_up(&r,&c,rows,cols,table,&aux_ziged);
+    }
+    
+    //cout << "f  [" << r << ":" << c << "] -> " <<  endl;
+    aux_ziged.push_back(table[r*cols+c]);
+
+    for(int i = 0; i<=max_index; i++){
+        ziged[i] = aux_ziged[i];
+    }
+}
+
+void test_zigzag(){
+    int test_table[] = {
+        1,  2,  3,  4,  5,  6,  7,  8,
+        9, 10, 11, 12, 13, 14, 15, 16,
+        17,18, 19, 20, 21, 22, 23, 24,
+        25,26, 27, 28, 29, 30, 31, 32,
+        33,34, 35, 36, 37, 38, 39, 40,
+        41,42, 43, 44, 45, 46, 47, 48,
+        49,50, 51, 52, 53, 54, 55, 56,
+        57,58, 59, 60, 61, 62, 63, 64,
+    };
+    
+
+    int* z = NULL;
+    zig_zag(test_table,z,8,8);
+    for(int i =0; i<64; i++){
+        std::cout << z[i] << " ";
+    }
+}
+
 // Basic constructor
 JpegPicture::JpegPicture() {
     init_first_markers();
@@ -164,7 +254,7 @@ APP0::APP0() {
 }
 
 
-SOF0::SOF0(char l0, char l1, char r0, char r1) {
+SOF0::SOF0(int l, int r) {
     init(19);
     data[1] = 0xC0;
     
@@ -176,12 +266,14 @@ SOF0::SOF0(char l0, char l1, char r0, char r1) {
     data[4] = 0x08;
 
     // Lines
-    data[5] = l0;
-    data[6] = l1;
+    //data[5] = l0;
+    //data[6] = l1;
+    lines(l);
+    rows(r);
 
     // Rows
-    data[7] = r0;
-    data[8] = r1;
+    //data[7] = r0;
+    //data[8] = r1;
 
     // Components Count
     data[9] = 0x03;
@@ -201,7 +293,7 @@ SOF0::SOF0(char l0, char l1, char r0, char r1) {
 
 int SOF0::length(int set_len){
     if(set_len > -1){
-        data[2] = ((char)set_len) >> 4;
+        data[2] = (char)(set_len >> 4);
         data[3] = (char)set_len;
     }
     int aux = data[2] << 4;
@@ -209,26 +301,64 @@ int SOF0::length(int set_len){
     return aux;
 }
 
-char SOF0::precision(char set_prec){
+int SOF0::precision(int set_prec){
     if(set_prec > -1){
-        data[4] = set_prec;
+        data[4] = (char)set_prec;
     }
-    return data[4];
+    return (int)data[4];
 }
 
 int SOF0::lines(int set_lines){
+    if(set_lines > -1){
+        data[5] = (char)(set_lines >> 4);
+        data[6] = (char)set_lines;
+    }
+    int aux = data[5] << 4;
+    aux += data[6];
+    return aux;
 }
 
 int SOF0::rows(int set_rows){
+    if(set_rows > -1){
+        data[7] = (char)(set_rows >> 4);
+        data[8] = (char)set_rows;
+    }
+    int aux = data[7] << 4;
+    aux += data[8];
+    return aux;
 }
 
-char SOF0::component_count(char set_count){
+int SOF0::component_count(int set_count){
+    if(set_count > -1){
+        data[9] = (char)set_count;
+    }
+    return (int)data[9];
 }
 
-char SOF0::sampling_factor(int c_id, char set_factor){
+int SOF0::sampling_factor(int c_id, int set_factor){
+    int component_count = (int)data[9];
+    if(c_id < component_count){
+        // 11 offset, *3 because of three tables
+        int index = 11 + (c_id*3);
+        if(set_factor > -1){
+            data[index] = (char)set_factor;
+        }
+        return (int)data[index];
+    }
+    return -1;
 }
 
-char SOF0::quant_table_id(int c_id, char set_quant_table_id){
+int SOF0::quant_table_id(int c_id, int set_quant_table_id){
+    int component_count = (int)data[9];
+    if(c_id < component_count){
+        // 12 offset, *3 because of three tables
+        int index = 12 + (c_id*3);
+        if(set_quant_table_id > -1){
+            data[index] = (char)set_quant_table_id;
+        }
+        return (int)data[index];
+    }
+    return -1;
 }
 
 DHT::DHT(){
