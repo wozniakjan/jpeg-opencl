@@ -120,8 +120,8 @@ badd +1 backup/cl_stuff.h
 badd +1 backup/cl_stuff.h
 badd +1 src/jpeg.cl
 badd +2 src/square.cl
-badd +0 src/jpeg_util.h
-badd +0 src/jpeg_util.cpp
+badd +1 src/jpeg_util.h
+badd +16 src/jpeg_util.cpp
 args Makefile
 edit Makefile
 set splitbelow splitright
@@ -225,12 +225,12 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 15 - ((7 * winheight(0) + 26) / 52)
+let s:l = 1 - ((0 * winheight(0) + 26) / 52)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-15
-normal! 0
+1
+normal! 015l
 tabedit src/main.cpp
 set splitbelow splitright
 set nosplitbelow
@@ -447,11 +447,11 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 98 - ((39 * winheight(0) + 26) / 52)
+let s:l = 82 - ((23 * winheight(0) + 26) / 52)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-98
+82
 normal! 0
 wincmd w
 argglobal
@@ -668,11 +668,11 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 2 - ((1 * winheight(0) + 26) / 52)
+let s:l = 1 - ((0 * winheight(0) + 26) / 52)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-2
+1
 normal! 0
 wincmd w
 argglobal
@@ -791,8 +791,8 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
-exe 'vert 1resize ' . ((&columns * 100 + 96) / 193)
-exe 'vert 2resize ' . ((&columns * 92 + 96) / 193)
+exe 'vert 1resize ' . ((&columns * 92 + 96) / 193)
+exe 'vert 2resize ' . ((&columns * 100 + 96) / 193)
 argglobal
 setlocal autoindent
 setlocal nobinary
@@ -889,12 +889,12 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 1 - ((0 * winheight(0) + 26) / 52)
+let s:l = 166 - ((18 * winheight(0) + 26) / 52)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-1
-normal! 0
+166
+normal! 025l
 wincmd w
 argglobal
 edit src/jpeg_util.h
@@ -993,15 +993,16 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 1 - ((0 * winheight(0) + 26) / 52)
+let s:l = 58 - ((7 * winheight(0) + 26) / 52)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-1
-normal! 0
+58
+normal! 08l
 wincmd w
-exe 'vert 1resize ' . ((&columns * 100 + 96) / 193)
-exe 'vert 2resize ' . ((&columns * 92 + 96) / 193)
+2wincmd w
+exe 'vert 1resize ' . ((&columns * 92 + 96) / 193)
+exe 'vert 2resize ' . ((&columns * 100 + 96) / 193)
 tabedit ~/projects/school/GMU/jpeg/jpge.h
 set splitbelow splitright
 wincmd _ | wincmd |
@@ -1221,6 +1222,7 @@ normal! zt
 976
 normal! 0
 wincmd w
+2wincmd w
 exe 'vert 1resize ' . ((&columns * 92 + 96) / 193)
 exe 'vert 2resize ' . ((&columns * 100 + 96) / 193)
 tabedit ~/projects/school/GMU/cv1/square.cpp
@@ -1331,7 +1333,8 @@ exe s:l
 normal! zt
 254
 normal! 05l
-tabnext 1
+2wincmd w
+tabnext 5
 if exists('s:wipebuf')
   silent exe 'bwipe ' . s:wipebuf
 endif
