@@ -438,7 +438,7 @@ void saveTruecolorPixmap(pixmap *data, const char *imgname)
 }
 
 
-int main(int argc, char **argv) {
+/*int main(int argc, char **argv) {
   if (argc < 2) {
     cerr << "not enough arguments" << endl;
     return 1;
@@ -451,7 +451,7 @@ int main(int argc, char **argv) {
 
   cout << "w: " << data->width << " h: " << data->height << endl;
   
-  /*
+  
   pixmap *Y;
   pixmap *Cb;
   pixmap *Cr;
@@ -465,13 +465,13 @@ int main(int argc, char **argv) {
   rgb_to_ycbcr(Y, Cb, Cr, data);
   saveGrayscalePixmap( Y, "Y.tga");
   saveGrayscalePixmap(Cb, "Cb.tga");
-  saveGrayscalePixmap(Cr, "Cr.tga"); */
+  saveGrayscalePixmap(Cr, "Cr.tga"); 
   
   dest = reduce_colors(data);  
   saveTruecolorPixmap(dest, "reduced.tga");
   
   return 0;
-}
+}*/
 
 
 

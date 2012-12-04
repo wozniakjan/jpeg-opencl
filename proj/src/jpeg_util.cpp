@@ -1,4 +1,5 @@
 #include "jpeg_util.h"
+#include <string.h>
 
 using namespace std;
 
@@ -198,4 +199,96 @@ SOF0::SOF0(char l0, char l1, char r0, char r1) {
     data[18] = 0x01; //QuantTable ID
 }
 
-DHT::DHT()
+int SOF0::length(int set_len){
+    if(set_len > -1){
+        data[2] = ((char)set_len) >> 4;
+        data[3] = (char)set_len;
+    }
+    int aux = data[2] << 4;
+    aux += data[3];
+    return aux;
+}
+
+char SOF0::precision(char set_prec){
+    if(set_prec > -1){
+        data[4] = set_prec;
+    }
+    return data[4];
+}
+
+int SOF0::lines(int set_lines){
+}
+
+int SOF0::rows(int set_rows){
+}
+
+char SOF0::component_count(char set_count){
+}
+
+char SOF0::sampling_factor(int c_id, char set_factor){
+}
+
+char SOF0::quant_table_id(int c_id, char set_quant_table_id){
+}
+
+DHT::DHT(){
+    init(840);
+    data[1] = 0xC4;
+
+    //Header Length
+    data[2] = 0x01;
+    data[3] = 0xA2;
+
+    //Table Class X Table Destination
+    data[4] = 0x00;
+
+    strcpy(data, "FFC401A200000105010101010101000000000000000001020304\
+       05060708090A0B100002010303020403050504040000017D0102030004110512\
+       2131410613516107227114328191A1082342B1C11552D1F02433627282090A161718191\
+       A25262728292A3435363738393A434445464748494A535455565758595A63646566\
+       6768696A737475767778797A838485868788898A92939495969798999AA2A3A4A5A6A7A8A9\
+       AAB2B3B4B5B6B7B8B9BAC2C3C4C5C6C7C8C9CAD2D3D4D5D6D7D8D9DAE1E2E3E4E5E\
+       6E7E8E9EAF1F2F3F4F5F6F7F8F9FA01000301010101010101010100000\
+       00000000102030405060708090A0B1100020102040403040705040400010277000\
+       102031104052131061241510761711322328108144291A1B1C109233352F0156272D\
+       10A162434E125F11718191A262728292A35363738393A434445464748494A53545556\
+       5758595A636465666768696A737475767778797A82838485868788898A92939495969798\
+       999AA2A3A4A5A6A7A8A9AAB2B3B4B5B6B7B8B9BAC2C3C4C5C6C7C8C9CAD2D3D4D5D6D7D8D9D\
+       AE2E3E4E5E6E7E8E9EAF2F3F4F5F6F7F8F9FA");
+}
+
+DRI::DRI(){
+    init(6);
+    data[1] = 0xDD;
+    
+    //Length
+    data[2] = 0x00;
+    data[3] = 0x04;
+
+    //interval
+    data[4] = 0x00;
+    data[5] = 0x00;
+}
+
+SOS::SOS(char* comp, int comp_count, char* pay, int pay_len){
+    init(5+comp_count*2+pay_len);
+    data[1] = 0xDA;
+
+    //length
+    data[2] = 0x00;
+    data[3] = 0x0C;
+
+    //number of image components - equal to cs in scan header
+    data[4] = 0x03;
+
+    for(int i = 0; i<(comp_count*2); i+=2){
+        //component i
+        data[i+5] = comp[i]; //selector
+        data[i+6] = comp[i+1]; //table (DC|AC)
+    }
+
+    int offset = comp_count*2+7;
+    for(int i = 0; i<pay_len; i++){
+        data[i+offset] = pay[i];
+    }
+}

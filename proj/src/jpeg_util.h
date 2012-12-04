@@ -17,7 +17,7 @@ class Marker {
     public:
         Marker();
         ~Marker();
-        void init(int _len);
+        void init(int length);
         char* get_data();
         int get_len();
 };
@@ -34,16 +34,25 @@ class APP0 : public Marker {
         APP0();
 };
 
+
 // Quantization Tables
 class DQT : public Marker {
     public:
+        //char length(char nl = 0);
         DQT(int type);
 };
 
 // Baseline DCT, Start of Frame
 class SOF0 : public Marker {
     public:
-        SOF0(char l0, char l1, char r0, char r1);
+        int length(int set_len=-1);
+        char precision(char set_prec=-1);
+        int lines(int set_l=-1);
+        int rows(int set_r=-1);
+        char component_count(char set_count=-1);
+        char sampling_factor(int component_id, char set_factor=-1);
+        char quant_table_id(int component_id, char set_qaunt_table_id=-1);
+        SOF0(char line_count0, char line_count1, char rows_count0, char rows_count1);
 };
 
 // Huffman Tables
@@ -52,10 +61,16 @@ class DHT : public Marker {
         DHT();
 };
 
+// Restart Interval
+class DRI : public Marker {
+    public:
+        DRI();
+};
+
 // Start of Scan
 class SOS : public Marker {
     public:
-        SOS();
+        SOS(char* components, int component_count, char* payload, int payload_length);
 };
 
 
