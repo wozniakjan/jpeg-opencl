@@ -19,22 +19,18 @@ ifeq ($(OS), Darwin)
 	CL_FLAGS=-I/usr/local/share/cuda/include/
 else
 	LIBS=-lOpenCL
-	CL_FLAGS=-L/opt/AMDAPP/lib/ -I/opt/AMDAPP/include/
+	CL_FLAGS=-I/usr/local/share/cuda/include/ #-L/opt/AMDAPP/lib/ -I/opt/AMDAPP/include/
 endif
 
 .PHONY: all clean edit $(BIN)
 
-
-
-
-
 all: $(BIN)$(PROJ)
 
 $(BIN)%.o: $(SRC)%.cpp $(BIN)
-	$(CC) -c $(FLAGS) $< -o $@
+	$(CC) -c $(FLAGS) $(CL_FLAGS) $< -o $@ $(LIBS)
 
 $(BIN)$(PROJ): $(OBJS)
-	$(CC) $(FLAGS) $(OBJS) -o $(BIN)$(PROJ) $(CL_LAGS) $(LIBS)
+	$(CC) $(FLAGS) $(OBJS) -o $(BIN)$(PROJ) $(CL_FLAGS) $(LIBS)
 
 $(BIN):
 	$(shell mkdir $(BIN))
