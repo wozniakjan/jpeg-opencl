@@ -43,7 +43,7 @@ class DQT : public Marker {
 // Baseline DCT, Start of Frame
 class SOF0 : public Marker {
     public:
-        SOF0();
+        SOF0(char l0, char l1, char r0, char r1);
 };
 
 // Huffman Tables

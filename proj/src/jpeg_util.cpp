@@ -162,8 +162,40 @@ APP0::APP0() {
     data[17] = 0x00;
 }
 
-SOF0::SOF0() {
-    init(0000000000000);
+
+SOF0::SOF0(char l0, char l1, char r0, char r1) {
+    init(19);
     data[1] = 0xC0;
     
+    // Frame Header Length
+    data[2] = 0x00;
+    data[3] = 0x11;
+
+    // Precision
+    data[4] = 0x08;
+
+    // Lines
+    data[5] = l0;
+    data[6] = l1;
+
+    // Rows
+    data[7] = r0;
+    data[8] = r1;
+
+    // Components Count
+    data[9] = 0x03;
+    // Y component
+    data[10] = 0x01; //ID
+    data[11] = 0x21; //SamplingFactor
+    data[12] = 0x00; //QuantTable ID
+    // Cb component
+    data[13] = 0x02; //ID
+    data[14] = 0x11; //SamplingFactor
+    data[15] = 0x01; //QuantTable ID
+    // Cr component
+    data[16] = 0x03; //ID
+    data[17] = 0x11; //SamplingFactor
+    data[18] = 0x01; //QuantTable ID
 }
+
+DHT::DHT()
