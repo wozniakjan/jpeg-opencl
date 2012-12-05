@@ -11,6 +11,8 @@
 
 
 void test_zigzag();
+void zig_zag(int* table, int* ziged, int rows, int cols);
+
 
 class Marker { 
     protected:
@@ -42,7 +44,7 @@ class APP0 : public Marker {
 class DQT : public Marker {
     public:
         //char length(char nl = 0);
-        DQT(int type);
+        DQT();
 };
 
 // Baseline DCT, Start of Frame
@@ -73,6 +75,7 @@ class DRI : public Marker {
 // Start of Scan
 class SOS : public Marker {
     public:
+        SOS();
         SOS(char* components, int component_count, char* payload, int payload_length);
 };
 

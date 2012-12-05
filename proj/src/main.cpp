@@ -3,7 +3,8 @@
 int main(int argc, char* argv[])
 {
     //initOpenCL();
-    test_zigzag();
+    JpegPicture *p = new JpegPicture();
+    p->save_to_file("test.jpg");
     return 0;
 }
 
