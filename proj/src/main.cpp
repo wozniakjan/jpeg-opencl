@@ -21,8 +21,10 @@ int main(int argc, char* argv[])
     inv_dct8x8(d,inv_d);
     inv_dct8x8(d_gpu,inv_d_gpu);
 
-    //JpegPicture *p = new JpegPicture(pic, 8, 8);
-    for(int i=0; i<64; i++){
+    JpegPicture *p = new JpegPicture(pic, 8, 8);
+    std::cout << p->block_count << "\n";
+
+    /*for(int i=0; i<64; i++){
         if(i%8==0) std::cout << "\n";
         std::cout << (int)d[i] << " ";
     }
@@ -41,7 +43,7 @@ int main(int argc, char* argv[])
     for(int i=0; i<64; i++){
         if(i%8==0) std::cout << "\n";
         std::cout << (int)inv_d_gpu[i] << " ";
-    }
+    }*/
 
     
     //p->save_to_file("test.jpg");

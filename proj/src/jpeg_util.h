@@ -12,7 +12,6 @@ extern int luminace_table[];
 extern int chrominace_table[];
 
 
-void test_zigzag();
 void zig_zag(int* table, int* ziged, int rows, int cols);
 void dct8x8(float* block, float* dct_block, int* table);
 void inv_dct8x8(float* dct_block, float* block);
@@ -97,10 +96,12 @@ class JpegPicture {
     int rows;
     int cols;
     
-    int block_count;
     std::vector<float*> *blocks;
 
+    float* blocks2[64];
+
     public:
+        int block_count;
         JpegPicture(unsigned char* pic, int rows, int cols);
         ~JpegPicture();
 

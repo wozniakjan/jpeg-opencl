@@ -32,22 +32,6 @@ int chrominace_table[] = {
     99,  99,  99,  99,  99,  99,  99,  99, 
 };
 
-void dct8(float* block, float* dst){
-    float aux[8];
-
-    for(int k=0; k<8; k++){
-        aux[k] = 0;
-        for(int n=0; n<8; n++){
-            aux[k] += block[n] * cosf(PI/8.0f*((float)n+0.5f)*(float)k);
-        }
-    }
-
-    dst[0] = aux[0]*sqrtf(1.0f/8.0f);
-    for(int i=1; i<8; i++){
-        dst[i] = aux[i]*sqrtf(2.0f/8.0f);
-    }
-}
-
 float lambda(int k){
     if(k==0) return 1.0f/sqrtf(2.0f);
     else return 1;
@@ -152,20 +136,9 @@ void zig_zag(int* table, int* ziged, int rows, int cols){
     }
 }
 
-void test_zigzag(){
-    int test_table[] = {
-        0, 1, 5, 6, 13,
-        2, 4, 7, 12,14,
-        3, 8, 11,15,18,
-        9, 10,16,17,19,
-    };
-    
-
-    int* z = (int*)malloc(sizeof(int)*4*5);
-    zig_zag(test_table,z,4,5);
-    for(int i =0; i<20; i++){
-        std::cout << z[i] << " ";
-    }
+int get_blocks(int x){
+    if(x%8 == 0) return x/8;
+    else return x/8 + 1;
 }
 
 // Basic constructor
@@ -174,7 +147,8 @@ JpegPicture::JpegPicture(unsigned char* p, int r, int c) {
     memcpy(src, p, r*c);
     rows = r;
     cols = c;
-    block_count = 0;
+
+    block_count = get_blocks(r)*get_blocks(c);
 
     int pic_y = 0, pic_x = 0;
     int max_y = r-1, max_x = c-1;
@@ -195,7 +169,7 @@ JpegPicture::JpegPicture(unsigned char* p, int r, int c) {
                 }
             }
             blocks->push_back(block);
-            block_count++;
+            //block_count++;
         }
     }
     markers.push_back(new SOI());
