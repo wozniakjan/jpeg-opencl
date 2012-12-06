@@ -14,8 +14,11 @@
 
 #include <iostream>
 #include <fstream>
-//#include <ssteram>
 #include <string>
+
+
+extern cl_mem cl_luminace_table; 
+extern cl_mem cl_chrominace_table;
 
 int initOpenCL();
 double getTime();
@@ -26,4 +29,7 @@ void CL_CALLBACK contextCallback(const char *err_info,
                                  const void *private_intfo,
                                  size_t cb,
                                  void *user_data);
+void dct8x8_gpu(float* src, float* dst, cl_mem* table);
+
+
 #endif 

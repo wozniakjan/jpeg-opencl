@@ -59,7 +59,7 @@ float g(int k, int j, int n, int m){
 }
 
 //MUL 4cv, Barina
-void dct8x8(float* block, float* dst){
+void dct8x8(float* block, float* dst, int* table){
     for(int k=0; k<BLOCK_SIZE; k++){
         for(int j=0; j<BLOCK_SIZE; j++){
             int index = k*8+j;
@@ -71,7 +71,7 @@ void dct8x8(float* block, float* dst){
                 }
             }
             //quantization
-            dst[index] = roundf(dst[index]/luminace_table[index])*luminace_table[index]; 
+            dst[index] = roundf((dst[index]/table[index]))*table[index]; 
         }
     }
 }

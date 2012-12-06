@@ -1,7 +1,4 @@
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
-
-
-__kernel void square ( __global float *inOut, int dataSize)
+__kernel void dct8x8 ( __global float *inOut, int dataSize)
 {
   int gx = (int)get_global_id(0);
 //  int lx = (int)get_local_id(0);

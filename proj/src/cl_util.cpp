@@ -1,4 +1,5 @@
 #include "cl_util.h"
+#include "jpeg_util.h"
 
 #define DEBUG
 
@@ -16,7 +17,13 @@ cl_context context;
 cl_command_queue queue;
 cl_program program;
 cl_kernel kernel;
+cl_int error;
 
+//buffers for dct
+cl_mem block_src;
+cl_mem block_dst;
+cl_mem cl_luminace_table; 
+cl_mem cl_chrominace_table;
 
 cl_int getPlatformID()
 {
@@ -52,7 +59,7 @@ cl_int getPlatformID()
 
 
 int initOpenCL(){
-    cl_int error = getPlatformID();
+    error = getPlatformID();
     checkClError(error, "getPlatformID");
     
     // Device
@@ -74,11 +81,43 @@ int initOpenCL(){
     // Load kernel
     error = loadKernelFromFile("../src/jpeg.cl");
     checkClError(error, "loadKernelFromFile");
+
+    // Alloc buffers & copy data to src buffer
+    block_src = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float)*64, NULL, &error);
+    checkClError(error, "clCreateBuffer");
+    block_dst = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float)*64, NULL, &error);
+    checkClError(error, "clCreateBuffer"); 
+
+    cl_luminace_table = clCreateBuffer(context, CL_MEM_READ_ONLY, 
+                                sizeof(cl_int)*64, NULL, &error);
+    checkClError(error, "clCreateBuffer");
+    cl_chrominace_table = clCreateBuffer(context, CL_MEM_READ_ONLY, 
+                                sizeof(cl_int)*64, NULL, &error);
+    checkClError(error, "clCreateBuffer");
+    error = clEnqueueWriteBuffer(queue, 
+            cl_luminace_table, //memory on gpu 
+            CL_TRUE,   //blocking write
+            0,         //offset
+            sizeof(cl_int)*64, //size in bytes of copied data 
+            luminace_table,       //memory data
+            0,         //wait list
+            NULL,      //wait list
+            NULL);     //wait list
+    checkClError(error,"clEnqueueWriteBuffer");
+    error = clEnqueueWriteBuffer(queue, 
+            cl_chrominace_table, //memory on gpu 
+            CL_TRUE,   //blocking write
+            0,         //offset
+            sizeof(cl_int)*64, //size in bytes of copied data 
+            chrominace_table,       //memory data
+            0,         //wait list
+            NULL,      //wait list
+            NULL);     //wait list
+    checkClError(error,"clEnqueueWriteBuffer");
 }
 
 
 cl_int loadKernelFromFile(const char* fileName){
-    cl_int error;
     ifstream src_file(fileName);
     if(!src_file.is_open()) return EXIT_FAILURE;
 
@@ -90,16 +129,44 @@ cl_int loadKernelFromFile(const char* fileName){
     checkClError(error, "clCreatePogramWithSource");
 
     error = clBuildProgram(program, dev_count, devices, NULL, NULL, NULL);
-    checkClError(error, "clBuildProgrm");
+    checkClError(error, "clBuildProgram");
 
-    kernel = clCreateKernel(program, "jpeg_block", &error);
+    kernel = clCreateKernel(program, "dct8x8", &error);
     checkClError(error, "clCreateKernel");
 
     return CL_SUCCESS;
 }
 
 
+void dct8x8_gpu(float* src, float* dst, cl_mem* table){
+    // Copy data from memory to gpu
+    error = clEnqueueWriteBuffer(queue, 
+            block_src, //memory on gpu 
+            CL_TRUE,   //blocking write
+            0,         //offset
+            sizeof(cl_float)*64, //size in bytes of copied data 
+            src,       //memory data
+            0,         //wait list
+            NULL,      //wait list
+            NULL);     //wait list
+    checkClError(error,"clEnqueueWriteBuffer");
 
+    clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&block_src);
+    clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&block_dst);
+    clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&cl_chrominace_table);
+
+    size_t GWS[2], LWS[2];
+    GWS[0] = 8;
+    GWS[1] = 8;
+    LWS[0] = 8;
+    LWS[1] = 8;
+
+    clEnqueueNDRangeKernel(queue, kernel, 2, NULL, GWS, LWS, 0, NULL, NULL);
+
+    clEnqueueReadBuffer(queue, block_dst, CL_TRUE, 0, sizeof(cl_float)*64, dst, 0, NULL, NULL);
+
+    clFinish(queue);
+}
 
 
 /**
@@ -206,7 +273,7 @@ const char *CLErrorString(cl_int _err) {
 
 inline void checkClError(cl_int err, char* debug){
     if(err != CL_SUCCESS){
-        cout << "ERROR: " << CLErrorString(err) << endl;
+        cout << "ERROR: " << CLErrorString(err) << " " << debug << endl;
         exit(EXIT_FAILURE);
     }
 #ifdef DEBUG

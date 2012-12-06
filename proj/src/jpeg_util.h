@@ -8,11 +8,13 @@
 #include <fstream>
 #include <vector>
 
+extern int luminace_table[];
+extern int chrominace_table[];
 
 
 void test_zigzag();
 void zig_zag(int* table, int* ziged, int rows, int cols);
-void dct8x8(float* block, float* dct_block);
+void dct8x8(float* block, float* dct_block, int* table);
 void inv_dct8x8(float* dct_block, float* block);
 
 class Marker { 
