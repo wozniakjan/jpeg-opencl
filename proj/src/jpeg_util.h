@@ -96,9 +96,9 @@ class JpegPicture {
     int rows;
     int cols;
     
-    std::vector<float*> *blocks;
+    //std::vector<float*> *blocks;
 
-    float* blocks2[64];
+    float** blocks;
 
     public:
         int block_count;

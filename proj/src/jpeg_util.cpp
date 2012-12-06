@@ -148,28 +148,28 @@ JpegPicture::JpegPicture(unsigned char* p, int r, int c) {
     rows = r;
     cols = c;
 
-    block_count = get_blocks(r)*get_blocks(c);
 
     int pic_y = 0, pic_x = 0;
     int max_y = r-1, max_x = c-1;
     int block_index, index;
-    float* block;
 
-    blocks = new vector<float*>();
-    for(int offset_y = 0; offset_y<r; offset_y+=BLOCK_SIZE){
-        for(int offset_x = 0; offset_x<c; offset_x+=BLOCK_SIZE){
-            block = (float*)malloc(sizeof(float)*BLOCK_SIZE*BLOCK_SIZE);
+    float* block;
+    block_count = get_blocks(r)*get_blocks(c);
+    blocks = (float**)malloc(sizeof(float*)*block_count);
+    int block_id = 0;
+    for(int offset_y = 0; offset_y<r; offset_y+=8){
+        for(int offset_x = 0; offset_x<c; offset_x+=8){
+            blocks[block_id] = (float*)malloc(sizeof(float)*64);
             for(int y = 0; y<BLOCK_SIZE; y++){
                 for(int x = 0; x<BLOCK_SIZE; x++){
                     pic_y = min(offset_y+y,max_y);
                     pic_x = min(offset_x+x,max_x);
                     index = pic_y*c+pic_x;
                     block_index = y*BLOCK_SIZE+x;
-                    block[block_index] = (float)src[index];
+                    blocks[block_id][block_index] = (float)src[index];
                 }
             }
-            blocks->push_back(block);
-            //block_count++;
+            block_id++;
         }
     }
     markers.push_back(new SOI());
@@ -185,12 +185,13 @@ JpegPicture::JpegPicture(unsigned char* p, int r, int c) {
 JpegPicture::~JpegPicture() {
     free(src);
     for(int i=0; i<block_count; i++)
-        blocks->pop_back();
+        free(blocks[i]);
+    free(blocks);
 }
 
 float* JpegPicture::get_block(int i){
     if(i<block_count){
-        return (*blocks)[i];
+        return blocks[i];
     }
     return NULL;
 }
