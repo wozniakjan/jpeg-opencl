@@ -13,11 +13,14 @@ FF C4 00 B5 11 00 02 01 02 04 04 03 04 07 05 04 04 00 01 02 77 00 01 02 03 11 04
 
  */
 
-
+#include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 #include <string.h>
 #include <stdint.h>
 #include <map>
+#include <vector>
+
 
 using namespace std;
 
@@ -450,35 +453,111 @@ void huffmanTable_1AC(map<unsigned char, string> &ht ) {
 
 }
 
-void huffEncode() {
+int encode (unsigned char bytes[], int size, map<unsigned char, string> huff) {
+  int i, j;
+  int k = 0;
+  string encoded;
 
-  map<unsigned char, string> ht_0DC;
-  map<unsigned char, string> ht_1DC;
-  map<unsigned char, string> ht_0AC;
+  /*
+  FILE *outputFile;
+  outputFile = fopen ("test","w");
+  if (outputFile == NULL) {
+    return 1;
+  }
+  */
+
+  for (i = 0; i < size; i++) {    
+    encoded = encoded + huff[bytes[i]];
+  }
+
+  int chars = encoded.length()/8;
+
+  unsigned char *encoded_bytes;
+  encoded_bytes = (unsigned char *) malloc (chars * sizeof(unsigned char));
+  if (encoded_bytes == NULL) {
+    return 1;
+  }
+    
+  for (i = 0; i < chars; i++) {
+    unsigned char c = 0;
+    
+    // shift zeros and ones to the variable
+    for (j = 0; j < 8; j++) {
+      c <<= 1;
+      if (encoded[k] == '1')
+        c += 1;
+      else 
+        c += 0;         
+      
+      k++;
+    }
+    
+    // save to array
+    encoded_bytes[i] = c;
+    
+    //fprintf(outputFile, "%c", c);
+  }
+
+  return 0;  
+}
+
+
+/* ----------------------------------------------------------------------- */
+
+void huffEncode_1AC(unsigned char bytes[], int size) {
   map<unsigned char, string> ht_1AC;
   map<unsigned char, string>::iterator it;
-
-  huffmanTable_0DC(ht_0DC);
-  huffmanTable_1DC(ht_1DC);
-  huffmanTable_0AC(ht_0AC);
+  
   huffmanTable_1AC(ht_1AC);
+  //cout << "Huffman table (1AC) - size: " << ht_1AC.size() << endl;
+
+  encode(bytes, size, ht_1AC);
+}
+
+void huffEncode_0AC(unsigned char bytes[], int size) {
+  map<unsigned char, string> ht_0AC;
+  map<unsigned char, string>::iterator it;
   
-  cout << "Huffman table (0DC) - size: " << ht_0DC.size() << endl;
+  huffmanTable_0AC(ht_0AC);
+  //cout << "Huffman table (0AC) - size: " << ht_0AC.size() << endl;
+
+  encode(bytes, size, ht_0AC);
+}
+
+void huffEncode_1DC(unsigned char bytes[], int size) {
+  map<unsigned char, string> ht_1DC;
+  map<unsigned char, string>::iterator it;
+  
+  huffmanTable_1DC(ht_1DC);
+  //cout << "Huffman table (1DC) - size: " << ht_1DC.size() << endl;
+
+  encode(bytes, size, ht_1DC);
+}
+
+void huffEncode_0DC(unsigned char bytes[], int size) {
+
+  map<unsigned char, string> ht_0DC;
+  map<unsigned char, string>::iterator it;
+  
+  huffmanTable_0DC(ht_0DC);
+  //cout << "Huffman table (0DC) - size: " << ht_0DC.size() << endl;
+  
+  encode(bytes, size, ht_0DC);
     
-  for (it = ht_0DC.begin(); it != ht_0DC.end(); ++it) {
-    cout << it->first << ": " << it->second << endl;
-  }
-  
-     
- // return jednorozmerne pole 64 integeru 
 }
 
 /*
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
 
-    huffEncode()
+  int n = 64;
+  unsigned char bytes[64];
+  for (int i=0; i<n; i++) {
+    bytes[i] = 0x00 + i;
+  }
+  
+  huffEncode_1AC(bytes, n);
     
     return 0;
 }
 */
+
