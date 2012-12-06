@@ -12,8 +12,8 @@
 
 void test_zigzag();
 void zig_zag(int* table, int* ziged, int rows, int cols);
-void dct8x8(unsigned char* block, float* dct_block);
-void inv_dct8x8(float* dct_block, unsigned char* block);
+void dct8x8(float* block, float* dct_block);
+void inv_dct8x8(float* dct_block, float* block);
 
 class Marker { 
     protected:

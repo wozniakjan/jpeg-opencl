@@ -48,17 +48,47 @@ void dct8(float* block, float* dst){
     }
 }
 
-void inv_dct8(float* block, float* dst){
-    float aux[8];
+float lambda(int k){
+    if(k==0) return 1.0f/sqrtf(2.0f);
+    else return 1;
+}
 
-    for(int k=0; k<8; k++){
-        aux[k] = sqrtf(0.5f) * block[0];
-        for(int n=1; n<8; n++)
-            aux[k] += block[n] * cosf(PI/8.0f*(float)n*((float)k+0.5f));
+float g(int k, int j, int n, int m){
+    return (lambda(k)*lambda(j)*2/8*cosf(k*PI/8*((float)n+0.5f))*
+            cosf(j*PI/8*((float)m+0.5f)));
+}
+
+//MUL 4cv, Barina
+void dct8x8(float* block, float* dst){
+    for(int k=0; k<BLOCK_SIZE; k++){
+        for(int j=0; j<BLOCK_SIZE; j++){
+            int index = k*8+j;
+            dst[index] = 0;
+            for(int n=0; n<8; n++){
+                for(int m=0; m<8; m++){
+                    int index2 = n*8+m;
+                    dst[index] += block[index2]*g(k,j,n,m);
+                }
+            }
+            //quantization
+            dst[index] = roundf(dst[index]/luminace_table[index])*luminace_table[index]; 
+        }
     }
+}
 
-    for(int i=0; i<8; i++)
-        dst[i] = aux[i] * sqrtf(2.0f/8.0f);
+void inv_dct8x8(float* block, float* dst){
+    for(int n=0; n<BLOCK_SIZE; n++){
+        for(int m=0; m<BLOCK_SIZE; m++){
+            int index = n*8+m;
+            dst[index] = 0;
+            for(int k=0; k<8; k++){
+                for(int j=0; j<8; j++){
+                    int index2 = k*8+j;
+                    dst[index] += block[index2]*g(k,j,n,m);
+                }
+            }
+        }
+    }
 }
 
 void move_right(int* r, int* c, int r_count, int c_count, int* t, vector<int>* z){
