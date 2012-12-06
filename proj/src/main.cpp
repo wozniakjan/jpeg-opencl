@@ -16,8 +16,8 @@ int main(int argc, char* argv[])
         pic[i]=i;
     }
 
-    dct8x8(pic,d,chrominace_table);
-    dct8x8_gpu(pic,d_gpu,&cl_chrominace_table);
+    dct8x8(pic,d,luminace_table);
+    dct8x8_gpu(pic,d_gpu,&cl_luminace_table);
     inv_dct8x8(d,inv_d);
     inv_dct8x8(d_gpu,inv_d_gpu);
 

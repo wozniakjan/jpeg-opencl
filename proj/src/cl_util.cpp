@@ -153,7 +153,7 @@ void dct8x8_gpu(float* src, float* dst, cl_mem* table){
 
     clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&block_src);
     clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&block_dst);
-    clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&cl_chrominace_table);
+    clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)table);
 
     size_t GWS[2], LWS[2];
     GWS[0] = 8;
