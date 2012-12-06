@@ -32,22 +32,6 @@ int chrominace_table[] = {
     99,  99,  99,  99,  99,  99,  99,  99, 
 };
 
-void dct8(float* block, float* dst){
-    float aux[8];
-
-    for(int k=0; k<8; k++){
-        aux[k] = 0;
-        for(int n=0; n<8; n++){
-            aux[k] += block[n] * cosf(PI/8.0f*((float)n+0.5f)*(float)k);
-        }
-    }
-
-    dst[0] = aux[0]*sqrtf(1.0f/8.0f);
-    for(int i=1; i<8; i++){
-        dst[i] = aux[i]*sqrtf(2.0f/8.0f);
-    }
-}
-
 float lambda(int k){
     if(k==0) return 1.0f/sqrtf(2.0f);
     else return 1;
@@ -152,20 +136,9 @@ void zig_zag(int* table, int* ziged, int rows, int cols){
     }
 }
 
-void test_zigzag(){
-    int test_table[] = {
-        0, 1, 5, 6, 13,
-        2, 4, 7, 12,14,
-        3, 8, 11,15,18,
-        9, 10,16,17,19,
-    };
-    
-
-    int* z = (int*)malloc(sizeof(int)*4*5);
-    zig_zag(test_table,z,4,5);
-    for(int i =0; i<20; i++){
-        std::cout << z[i] << " ";
-    }
+int get_blocks(int x){
+    if(x%8 == 0) return x/8;
+    else return x/8 + 1;
 }
 
 // Basic constructor
@@ -174,28 +147,29 @@ JpegPicture::JpegPicture(unsigned char* p, int r, int c) {
     memcpy(src, p, r*c);
     rows = r;
     cols = c;
-    block_count = 0;
+
 
     int pic_y = 0, pic_x = 0;
     int max_y = r-1, max_x = c-1;
     int block_index, index;
-    float* block;
 
-    blocks = new vector<float*>();
-    for(int offset_y = 0; offset_y<r; offset_y+=BLOCK_SIZE){
-        for(int offset_x = 0; offset_x<c; offset_x+=BLOCK_SIZE){
-            block = (float*)malloc(sizeof(float)*BLOCK_SIZE*BLOCK_SIZE);
+    float* block;
+    block_count = get_blocks(r)*get_blocks(c);
+    blocks = (float**)malloc(sizeof(float*)*block_count);
+    int block_id = 0;
+    for(int offset_y = 0; offset_y<r; offset_y+=8){
+        for(int offset_x = 0; offset_x<c; offset_x+=8){
+            blocks[block_id] = (float*)malloc(sizeof(float)*64);
             for(int y = 0; y<BLOCK_SIZE; y++){
                 for(int x = 0; x<BLOCK_SIZE; x++){
                     pic_y = min(offset_y+y,max_y);
                     pic_x = min(offset_x+x,max_x);
                     index = pic_y*c+pic_x;
                     block_index = y*BLOCK_SIZE+x;
-                    block[block_index] = (float)src[index];
+                    blocks[block_id][block_index] = (float)src[index];
                 }
             }
-            blocks->push_back(block);
-            block_count++;
+            block_id++;
         }
     }
     markers.push_back(new SOI());
@@ -211,12 +185,13 @@ JpegPicture::JpegPicture(unsigned char* p, int r, int c) {
 JpegPicture::~JpegPicture() {
     free(src);
     for(int i=0; i<block_count; i++)
-        blocks->pop_back();
+        free(blocks[i]);
+    free(blocks);
 }
 
 float* JpegPicture::get_block(int i){
     if(i<block_count){
-        return (*blocks)[i];
+        return blocks[i];
     }
     return NULL;
 }
