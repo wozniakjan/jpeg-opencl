@@ -1,5 +1,9 @@
 #include "jpeg_util.h"
 #include <string.h>
+#include <math.h>
+
+#define PI 3.14159265358979323846264338327950288f
+#define BLOCK_SIZE 8
 
 using namespace std;
 
@@ -28,7 +32,34 @@ int chrominace_table[] = {
     99,  99,  99,  99,  99,  99,  99,  99, 
 };
 
+void dct8(float* block, float* dst){
+    float aux[8];
 
+    for(int k=0; k<8; k++){
+        aux[k] = 0;
+        for(int n=0; n<8; n++){
+            aux[k] += block[n] * cosf(PI/8.0f*((float)n+0.5f)*(float)k);
+        }
+    }
+
+    dst[0] = aux[0]*sqrtf(1.0f/8.0f);
+    for(int i=1; i<8; i++){
+        dst[i] = aux[i]*sqrtf(2.0f/8.0f);
+    }
+}
+
+void inv_dct8(float* block, float* dst){
+    float aux[8];
+
+    for(int k=0; k<8; k++){
+        aux[k] = sqrtf(0.5f) * block[0];
+        for(int n=1; n<8; n++)
+            aux[k] += block[n] * cosf(PI/8.0f*(float)n*((float)k+0.5f));
+    }
+
+    for(int i=0; i<8; i++)
+        dst[i] = aux[i] * sqrtf(2.0f/8.0f);
+}
 
 void move_right(int* r, int* c, int r_count, int c_count, int* t, vector<int>* z){
     int index = (*r)*c_count+(*c);
@@ -108,15 +139,35 @@ void test_zigzag(){
 }
 
 // Basic constructor
-JpegPicture::JpegPicture() {
-    init_first_markers();
-}
+JpegPicture::JpegPicture(unsigned char* p, int r, int c) {
+    src = (unsigned char*)malloc(sizeof(unsigned char)*r*c);
+    memcpy(src, p, r*c);
+    rows = r;
+    cols = c;
+    block_count = 0;
 
-JpegPicture::~JpegPicture() {
-}
+    int pic_y = 0, pic_x = 0;
+    int max_y = r-1, max_x = c-1;
+    int block_index, index;
+    float* block;
 
-// Initializes all the markers and headers to default values
-void JpegPicture::init_first_markers() {
+    blocks = new vector<float*>();
+    for(int offset_y = 0; offset_y<r; offset_y+=BLOCK_SIZE){
+        for(int offset_x = 0; offset_x<c; offset_x+=BLOCK_SIZE){
+            block = (float*)malloc(sizeof(float)*BLOCK_SIZE*BLOCK_SIZE);
+            for(int y = 0; y<BLOCK_SIZE; y++){
+                for(int x = 0; x<BLOCK_SIZE; x++){
+                    pic_y = min(offset_y+y,max_y);
+                    pic_x = min(offset_x+x,max_x);
+                    index = pic_y*c+pic_x;
+                    block_index = y*BLOCK_SIZE+x;
+                    block[block_index] = (float)src[index];
+                }
+            }
+            blocks->push_back(block);
+            block_count++;
+        }
+    }
     markers.push_back(new SOI());
     markers.push_back(new APP0());
     markers.push_back(new DQT());
@@ -127,12 +178,25 @@ void JpegPicture::init_first_markers() {
     markers.push_back(new EOI());
 }
 
+JpegPicture::~JpegPicture() {
+    free(src);
+    for(int i=0; i<block_count; i++)
+        blocks->pop_back();
+}
+
+float* JpegPicture::get_block(int i){
+    if(i<block_count){
+        return (*blocks)[i];
+    }
+    return NULL;
+}
+
 // Saves the picture from memory to the file
 void JpegPicture::save_to_file(string file_name) {
     ofstream pic(file_name.c_str(), ios::out | ios::binary);
     
     for(int i=0; i<markers.size(); i++){
-        pic.write(markers[i]->get_data(),markers[i]->get_len());
+        pic.write((char*)markers[i]->get_data(),markers[i]->get_len());
     }
 }
 
@@ -140,7 +204,7 @@ Marker::Marker(){}
 
 void Marker::init(int _len) {
     data_len = _len;
-    data = (char*)malloc(sizeof(char)*data_len);
+    data = (unsigned char*)malloc(sizeof(unsigned char)*data_len);
     data[0] = 0xFF;
 }
 
@@ -151,7 +215,7 @@ Marker::~Marker() {
     data_len = 0;
 }
 
-char* Marker::get_data() {
+unsigned char* Marker::get_data() {
     return data;
 }
 
@@ -190,7 +254,7 @@ DQT::DQT() {
         }
         
         for(int i = 0; i<64; i++){
-            data[i+offset] = (char)table[i];
+            data[i+offset] = (unsigned char)table[i];
         }
     }
 }
@@ -248,8 +312,8 @@ SOF0::SOF0(int l, int r) {
     //data[6] = 0x90;
 
     // Rows
-    data[7] = 0x00;
-    data[8] = 0xC8;
+    //data[7] = 0x00;
+    //data[8] = 0xC8;
 
     // Components Count
     data[9] = 0x03;
@@ -269,8 +333,8 @@ SOF0::SOF0(int l, int r) {
 
 int SOF0::length(int set_len){
     if(set_len > -1){
-        data[2] = (char)(set_len >> 8);
-        data[3] = (char)set_len & 0xFF;
+        data[2] = (unsigned char)(set_len >> 8);
+        data[3] = (unsigned char)set_len & 0xFF;
     }
     int aux = data[2] << 8;
     aux += data[3];
@@ -279,15 +343,15 @@ int SOF0::length(int set_len){
 
 int SOF0::precision(int set_prec){
     if(set_prec > -1){
-        data[4] = (char)set_prec;
+        data[4] = (unsigned char)set_prec;
     }
     return (int)data[4];
 }
 
 int SOF0::lines(int set_lines){
     if(set_lines > -1){
-        data[5] = (char)(set_lines >> 8);
-        data[6] = (char)set_lines & 0xFF;
+        data[5] = (unsigned char)(set_lines >> 8);
+        data[6] = (unsigned char)set_lines & 0xFF;
     }
     int aux = data[5] << 8;
     aux += data[6];
@@ -296,8 +360,8 @@ int SOF0::lines(int set_lines){
 
 int SOF0::rows(int set_rows){
     if(set_rows > -1){
-        data[7] = (char)(set_rows >> 8);
-        data[8] = (char)set_rows & 0xFF;
+        data[7] = (unsigned char)(set_rows >> 8);
+        data[8] = (unsigned char)set_rows & 0xFF;
     }
     int aux = data[7] << 8;
     aux += data[8];
@@ -306,7 +370,7 @@ int SOF0::rows(int set_rows){
 
 int SOF0::component_count(int set_count){
     if(set_count > -1){
-        data[9] = (char)set_count;
+        data[9] = (unsigned char)set_count;
     }
     return (int)data[9];
 }
@@ -317,7 +381,7 @@ int SOF0::sampling_factor(int c_id, int set_factor){
         // 11 offset, *3 because of three tables
         int index = 11 + (c_id*3);
         if(set_factor > -1){
-            data[index] = (char)set_factor;
+            data[index] = (unsigned char)set_factor;
         }
         return (int)data[index];
     }
@@ -330,7 +394,7 @@ int SOF0::quant_table_id(int c_id, int set_quant_table_id){
         // 12 offset, *3 because of three tables
         int index = 12 + (c_id*3);
         if(set_quant_table_id > -1){
-            data[index] = (char)set_quant_table_id;
+            data[index] = (unsigned char)set_quant_table_id;
         }
         return (int)data[index];
     }
@@ -368,7 +432,7 @@ DHT::DHT(){
     for(int i = 0; i<aux.length(); i+=2){
         x[0] = aux[i];
         x[1] = aux[i+1];
-        data[i/2] = (char)strtol(x,NULL,16);
+        data[i/2] = (unsigned char)strtol(x,NULL,16);
     }
 }
 
@@ -412,11 +476,11 @@ SOS::SOS(){
     for(int i = 0; i<aux.length(); i+=2){
         x[0] = aux[i];
         x[1] = aux[i+1];
-        data[i/2] = (char)strtol(x,NULL,16);
+        data[i/2] = (unsigned char)strtol(x,NULL,16);
     }
 }
 
-SOS::SOS(char* comp, int comp_count, char* pay, int pay_len){
+SOS::SOS(unsigned char* comp, int comp_count, unsigned char* pay, int pay_len){
     init(5+comp_count*2+pay_len);
     data[1] = 0xDA;
 

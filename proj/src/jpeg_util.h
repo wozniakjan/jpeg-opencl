@@ -12,18 +12,19 @@
 
 void test_zigzag();
 void zig_zag(int* table, int* ziged, int rows, int cols);
-
+void dct8x8(unsigned char* block, float* dct_block);
+void inv_dct8x8(float* dct_block, unsigned char* block);
 
 class Marker { 
     protected:
-        char *data;     // Head[2] + payload[n]
+        unsigned char *data;     // Head[2] + payload[n]
         int data_len;   // Length of Marker Head & payload
 
     public:
         Marker();
         ~Marker();
         void init(int length);
-        char* get_data();
+        unsigned char* get_data();
         int get_len();
 };
 
@@ -43,7 +44,7 @@ class APP0 : public Marker {
 // Quantization Tables
 class DQT : public Marker {
     public:
-        //char length(char nl = 0);
+        //unsigned char length(unsigned char nl = 0);
         DQT();
 };
 
@@ -76,7 +77,7 @@ class DRI : public Marker {
 class SOS : public Marker {
     public:
         SOS();
-        SOS(char* components, int component_count, char* payload, int payload_length);
+        SOS(unsigned char* components, int component_count, unsigned char* payload, int payload_length);
 };
 
 
@@ -89,13 +90,20 @@ class EOI : public Marker {
 
 class JpegPicture {
     std::vector<Marker*> markers;    // Markers
-    void init_first_markers();
+
+    unsigned char* src;
+    int rows;
+    int cols;
+    
+    int block_count;
+    std::vector<float*> *blocks;
 
     public:
-        JpegPicture();
+        JpegPicture(unsigned char* pic, int rows, int cols);
         ~JpegPicture();
 
         void save_to_file(std::string file_name);
+        float* get_block(int i);
 };
 
 #endif
