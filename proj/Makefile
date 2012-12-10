@@ -13,6 +13,8 @@ BIN   = bin/
 FLAGS = -std=c++98 -Wall -pedantic -w
 CC    = g++
 OBJS  = $(shell ls src/*cpp | sed s/src/bin/g | sed s/cpp/o/g) 
+DOC   = dokumentace
+
 
 ifeq ($(OS), Darwin)
 	LIBS=-framework OpenCL
@@ -41,6 +43,10 @@ $(BIN):
 	$(shell mkdir $(BIN))
 
 
+$(DOC).pdf:
+	cd doc; pdflatex $(DOC)
+	cd doc; pdflatex $(DOC)
+
 
 edit:
 	vim -S session.vim
@@ -50,3 +56,11 @@ run:
 
 clean:
 	rm -rf $(BIN)*
+	cd doc;rm -f $(DOC).aux
+	cd doc;rm -f $(DOC).log
+	cd doc;rm -f $(DOC).dvi
+	cd doc;rm -f $(DOC).ps
+	cd doc;rm -f $(DOC).pdf
+	cd doc;rm -f $(DOC).bbl
+	cd doc;rm -f $(DOC).blg
+	cd doc;rm -f $(DOC).out
