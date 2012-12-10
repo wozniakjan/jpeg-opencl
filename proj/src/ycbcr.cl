@@ -1,3 +1,18 @@
+__kernel void y(){
+
+}
+
+__kernel void cb(){
+
+}
+
+__kernel void cr(){
+
+}
+
+/*
+//obavam se, ze kompilator OpenCL nebude cl_uchar* znat, pokud mu nereknes, jak vypada
+//radeji bych zkusil pouzivat nejake normalni ceckovske typy, treba unsigned char
 
 __kernel void y(__global cl_uchar* pixels, __global unsigned int width, __global cl_uchar* group_result) {
   unsigned char y;
@@ -45,4 +60,4 @@ __kernel void cr(__global cl_uchar* pixels, __local cl_uchar* local_result, __gl
 
   group_result[index_y*width+index_x] = cr;      
 
-}
+}*/

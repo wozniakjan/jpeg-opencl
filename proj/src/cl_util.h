@@ -28,8 +28,7 @@ extern cl_mem cl_chrominace_table;
 
 int initOpenCL();
 double getTime();
-cl_int loadDctKernelFromFile(const char* cFilename);
-cl_int loadInvDctKernelFromFile(const char* cFilename);
+cl_int loadKernelFromFile(const char* fileName, cl_kernel* kernel, char* kernel_name);
 void checkClError(cl_int err, char* debug);
 const char *CLErrorString(cl_int _err);
 void CL_CALLBACK contextCallback(const char *err_info, 

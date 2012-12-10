@@ -32,12 +32,8 @@ cl_kernel kernel_cb;
 cl_kernel kernel_cr;
 
 // buffers for color transormation
-cl_mem src_y;
-cl_mem src_cb;
-cl_mem src_cr;
-cl_mem dst_y;
-cl_mem dst_cb;
-cl_mem dst_cr;
+cl_mem src_ycbcr;
+cl_mem dst_ycbcr;
 
 //max number of local work items
 size_t max_work_item_size[3];
@@ -94,7 +90,7 @@ void set_max_dct_device_worksize(){
     dct_max_local_work_item_size[0] = set_dct_size(max_work_item_size[0]);
     dct_max_local_work_item_size[1] = set_dct_size(max_work_item_size[1]);
     dct_max_local_work_item_size[2] = set_dct_size(max_work_item_size[2]);
-    cout << dct_max_local_work_item_size[0] << " " << dct_max_local_work_item_size [1] << " " <<dct_max_local_work_item_size[2] << "\n";
+//    cout << dct_max_local_work_item_size[0] << " " << dct_max_local_work_item_size [1] << " " <<dct_max_local_work_item_size[2] << "\n";
 }
 
 
@@ -121,15 +117,19 @@ int initOpenCL(){
     queue = clCreateCommandQueue(context, devices[0], 0, &error);
     checkClError(error, "clCreateCommandQueue");
 
-    // Load dct kernel
-    error = loadDctKernelFromFile("../src/jpeg.cl");
+    // Load kernels
+    error = loadKernelFromFile("../src/jpeg.cl", &dct_kernel, "dct8x8");
+    checkClError(error, "loadKernelFromFile");
+    error = loadKernelFromFile("../src/jpeg.cl", &inv_dct_kernel, "inv_dct8x8");
+    checkClError(error, "loadKernelFromFile");
+    error = loadKernelFromFile("../src/ycbcr.cl", &kernel_y, "y");
+    checkClError(error, "loadKernelFromFile");
+    error = loadKernelFromFile("../src/ycbcr.cl", &kernel_cb, "cb");
+    checkClError(error, "loadKernelFromFile");
+    error = loadKernelFromFile("../src/ycbcr.cl", &kernel_cr, "cr");
     checkClError(error, "loadKernelFromFile");
 
-    // Load inv dct kernel
-    error = loadInvDctKernelFromFile("../src/jpeg.cl");
-    checkClError(error, "loadKernelFromFile");
-
-    // Alloc buffers & copy data to src buffer
+    // Alloc buffers with const size & copy data to quantization table buffers
     block_src = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float)*64, NULL, &error);
     checkClError(error, "clCreateBuffer");
     block_dst = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float)*64, NULL, &error);
@@ -163,8 +163,7 @@ int initOpenCL(){
     checkClError(error,"clEnqueueWriteBuffer");
 }
 
-
-cl_int loadDctKernelFromFile(const char* fileName){
+cl_int loadKernelFromFile(const char* fileName, cl_kernel* kernel, char* kernel_name){
     ifstream src_file(fileName);
     if(!src_file.is_open()) return EXIT_FAILURE;
 
@@ -176,30 +175,9 @@ cl_int loadDctKernelFromFile(const char* fileName){
     checkClError(error, "clCreatePogramWithSource");
 
     error = clBuildProgram(program, dev_count, devices, NULL, NULL, NULL);
-    checkClError(error, "clBuildProgram");
+    checkClError(error, /*"clBuildProgram"*/kernel_name);
 
-    dct_kernel = clCreateKernel(program, "dct8x8", &error);
-    checkClError(error, "clCreateKernel");
-
-    return CL_SUCCESS;
-}
-
-
-cl_int loadInvDctKernelFromFile(const char* fileName){
-    ifstream src_file(fileName);
-    if(!src_file.is_open()) return EXIT_FAILURE;
-
-    string src_prog(istreambuf_iterator<char>(src_file), (istreambuf_iterator<char>()));
-    const char *src = src_prog.c_str();
-    size_t length = src_prog.length();
-
-    program = clCreateProgramWithSource(context, 1, &src, &length, &error);
-    checkClError(error, "clCreatePogramWithSource");
-
-    error = clBuildProgram(program, dev_count, devices, NULL, NULL, NULL);
-    checkClError(error, "clBuildProgram");
-
-    inv_dct_kernel = clCreateKernel(program, "inv_dct8x8", &error);
+    (*kernel) = clCreateKernel(program, kernel_name, &error);
     checkClError(error, "clCreateKernel");
 
     return CL_SUCCESS;
@@ -268,6 +246,36 @@ void inv_dct8x8_gpu(float* src, float* dst){
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
+/*
+
+//tahle funkce se zavola jen jednou, kdyz uz znas obrazek a jeho velikost   
+void load_picture_data_to_gpu(array* picture_data, int size){
+    alokace jedineho src bufferu
+    alokace jedineho dst bufferu
+
+    nahrat data do src_bufferu
+}
+
+//data jsou raw data obrazku, dst by melo obsahovat vsechny slozky, proste celek co se
+//preda dalsimu bloku na zpracovani, treba trirozmerne pole nebo jednorozmerne a kazda
+//slozka bude posunuta o offset
+void ycbcr_gpu(pixmap* data, ycbcr_picture* dst){
+    load_picture_data_to_gpu
+    
+    nastavit argumenty, rekl bych ze stejne pro vsechny kernely
+    nastavig GWS a LWS, rekl bych ze stejne pro vsechny kernely
+
+    zavolat kernel_y
+    nahrat data z gpu do dst
+    zavolat kernel_cb
+    nahrat data z gpu do dst + offset
+    zavolat kernel_cr
+    nahrat data z gpu do dst + 2offsety
+    
+    finish
+}
+
+    
 
 cl_int loadKernelFromFile_ycbcr(const char* fileName, const char* kernel_name){
     ifstream src_file(fileName);
@@ -328,6 +336,12 @@ int initOpenCL_color_transform(pixmap* data){
 }
 
 void ycbcr_gpu(pixmap* data, pixmap* dst, cl_mem src_name, cl_mem dst_name, cl_kernel kernel_name){
+    src_name = clCreateBuffer(context, CL_MEM_READ_ONLY, 
+            sizeof(cl_uchar)*data->width*data->height, NULL, &error);
+    checkClError(error, "clCreateBuffer");
+    dst_name = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 
+            sizeof(cl_uchar)*data->width*data->height, NULL, &error);
+    checkClError(error, "clCreateBuffer"); 
     // Copy data from memory to gpu
     error = clEnqueueWriteBuffer(queue, 
             src_name, //memory on gpu 
@@ -364,7 +378,7 @@ void color_transform_gpu(pixmap* data, pixmap* p_y, pixmap* p_cb, pixmap* p_cr) 
   ycbcr_gpu(data, p_cr, src_cr, dst_cr, kernel_cr);
 
 }
-
+*/
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 

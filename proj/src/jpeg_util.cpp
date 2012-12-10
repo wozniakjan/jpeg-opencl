@@ -42,7 +42,6 @@ void load_table(char* table_file, int* table){
     if(f.is_open()){
         for(int index = 0; index < 64 && !f.eof(); index++){
             f >> val;
-            cout << index << "[" << val << "] "; 
             val_i = atoi(val.c_str());
             table[index] = val_i;
         }
