@@ -1,17 +1,10 @@
 
-#include <iostream>
-#include <cmath>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <stdio.h>      /* printf */
-#include <string.h>     /* strcat */
-#include <stdlib.h>     /* strtol */
-#include <stdbool.h>
-#include <vector>
-#include <stdint.h>
+#include "dpcm_rle.h"
 
-using namespace std;
+
+short  previous_block_Y[64] = {0};
+short previous_block_Cb[64] = {0};
+short previous_block_Cr[64] = {0};
 
 /* 
  (Z roota) Do Huffmanova kodovani jdou DC koeficienty nasledovne:
@@ -24,86 +17,57 @@ using namespace std;
   - binarne cislo -63 (na sesti bitech; podle cisla kategorie) - 000000
   - do Huffmana prijde nasledujici "6 -63"
   
- Kodovani hodnoty koeficientu bude probihat az v Huffmanove kodovani spolu s kodovanim cisla diferencni kategorie.
+ Zjisti se diferencni kategorie a za ni se prilepi zakodovania hodnota koeficientu (dvojkovy doplnek).
  */
-string huff_bits(int num, unsigned int nBit){
-    string b;
-    bool negative = false;
+string to_bits(int num, unsigned int nBit){
+  string b;
     
-    if (num < 0) {
-      cout << "zaporne!" << endl;
-      num = abs(num);
-      negative = true;
-    }
-    
-    unsigned int temp = 1 << (nBit-1), i;
+  unsigned int temp = 1 << (nBit-1), i;
 
-    for(i = 0; i < nBit; ++i) {
-        //printf("%d ", ((num&temp)?1:0) );
-        if (negative) {
-          b = b + ((num & temp) ? "0":"1");
-        }
-        else {
-          b = b + ((num & temp) ? "1":"0");
-        }
-        
-        temp = temp >> 1;
-    }
+  for(i = 0; i < nBit; ++i) {
+    //printf("%d ", ((num&temp)?1:0) );
+
+    b = b + ((num & temp) ? "1":"0");
+    temp = temp >> 1;
+  }
     
-    return b;
+  return b;
 }  
 
 /*
-  Vstupem je pole DC koeficientu (11b cisel). 
-  Je treba pocitat diferenci, proto vstupuji dva bloky (128 hodnot). Pokud se jedna o prvni blok, vstupuje pouze prvnich 64 hodnot.
-  Pred Huffmanovym kodovanim se zpracuji tak, ze misto hodnoty koeficientu bude na vystupu hodnota ve formatu formatu "K D", kde:
-  - K je kategorie diference (pocet bitu, na kterych lze zapsat hodnotu koeficientu)
-  - D je diference hodnoty koeficientu - odecteme aktualni hodnotu od hodnoty v predchozim bloku (pri pocitani prvniho bloku obsahuje predchozi blok same nuly)
-  
-  Vystupem je dvakrat tolik hodnot typu short, ktere jde do Huffmanova kodovani.
+  Vstupem je pole DC koeficientu (11b cisel), blok 8x8 hodnot. Pocita se diference mezi aktualnim a predchozim blokem. Pokud se jedna o prvni blok, predchozi blok obsahuje same nuly.
+  Kazda slozka (Y, Cb, Cr) se pocita zvlast zavolanim prislusne funkce (dc_Y, dc_Cb, dc_Cr).
+  Vystupem jsou diference, ktere jdou do Huffmanova kodovani.
  */
-void dpcm_DC(short bytes[], int size, short out[]) {
-  int i, j;
-  int category;
+short *dpcm_DC(short bytes[], int size, short previous_block[]) {
   
-  // first block
-  if (size == 64) {
-    unsigned char a = 0;
-    //cout << "first block" << endl;
-    
-    for (int i=0; i<128; i++) {     
-      out[i+1] = a - bytes[i];
-      double abs_n = abs((double) out[i+1]);
-      
-      if (abs_n == 0) category = 0;
-      else if (abs_n == 1) category = 1;
-      else category = ceil(log2(abs_n));
-     
-      out[i] = category;
-      cout << "[" << out[i] << "," << out[i+1] << "] ";      
-      
-      i++;
-    }    
+  if (size != 64) return NULL; // should not happen
+
+  short *outDC;
+  outDC = (short *) malloc (size * sizeof(short));
+  if (outDC == NULL) return NULL;
+        
+  for (int i=0; i<size; i++) {     
+    outDC[i] = previous_block[i] - bytes[i];  // compute the difference
+    previous_block[i] = bytes[i];   // save the block to use it for the difference with the next block
+    // cout << outDC[i] << endl;      
   }
-  else if (size == 128) {
-    //cout << "n-th block" << endl;
-
-    for (i=64, j=0; i<128; i++, j++) {
-      out[j+1] = bytes[j] - bytes[i];
-      double abs_n = abs((double) bytes[j] - bytes[i]);
-      
-      if (abs_n == 0) category = 0;
-      else if (abs_n == 1) category = 1;
-      else category = ceil(log2(abs_n));
-
-      out[j] = category;      
-      //cout << "[" << out[j] << "," << out[j+1] << "] ";      
-
-      j++;
-    }
-  }
-   
+  
+  return outDC;   
 }
+
+short *dc_Y(short bytes[], int size) {
+  return dpcm_DC(bytes, size, previous_block_Y);
+}
+
+short *dc_Cb(short bytes[], int size) {
+  return dpcm_DC(bytes, size, previous_block_Cb);
+}
+
+short *dc_Cr(short bytes[], int size) {
+  return dpcm_DC(bytes, size, previous_block_Cr);
+}
+
 
 uint8_t makeByte (string s) {
   uint8_t byte;
@@ -120,24 +84,27 @@ uint8_t makeByte (string s) {
   return byte;
 }
 
+
 /*
- Do rle_AC vstupuje blok 8x8 hodnot. Na vystupu byva kratsi pole 8b hodnot (v urcitych pripadech muze byt i delsi).
- Z kazdeho AC koeficientu v bloku udela 8bitovou hodnotu "RRRRSSSS".
-  - SSSS jsou 4 bity znacici, podobne jako u DC, kategorie hodnoty (pocet bitu, na jakem se da hodnota vyjadrit)
-  - RRRR (opet 4b) je pocet nulovych koeficientu, ktere koeficientu predchazely. Je-li jich vice nez 15, pouzije se pro zakodovani 8bitova hodnota 0xF0, ktera znaci 15 za sebou jdoucich nulovych koeficientu. Jsme-li na konci a zbyvaji jiz same nuly, pouzije se kod 0x00 (End of Block).
+  Do rle_AC vstupuje blok 8x8 hodnot. Na vystupu byva kratsi pole 8b hodnot (v nekterych pripadech ale muze byt i delsi).
+  Z kazdeho AC koeficientu v bloku udela 8bitovou hodnotu "RRRRSSSS".
+   - SSSS jsou 4 bity znacici, podobne jako u DC, kategorie hodnoty (pocet bitu, na jakem se da hodnota vyjadrit)
+   - RRRR (opet 4b) je pocet nulovych koeficientu, ktere koeficientu predchazely. Je-li jich vice nez 15, pouzije se pro zakodovani 8bitova hodnota 0xF0, ktera znaci 15 za sebou jdoucich nulovych koeficientu. Jsme-li na konci a zbyvaji jiz same nuly, pouzije se kod 0x00 (End of Block).
   
-  Vraci pole 8b hodnot, ktere postupuje dale do bloku s Huffmanovym kodovanim. 
+  Vraci vektor dvojic <uint*_t, short>. Dvojice obsahuji zakodovani rlc a hodnotu koeficientu z bloku. Vektor postupuje dale do Huffmanova kodovani. 
  */
-uint8_t *rle_AC(short bytes[], int *size) {
+// uint8_t *rlc_AC(short bytes[], int *size) {
+vector< pair<uint8_t,short> > rlc_AC(short bytes[], int *size) {
   int i, j;
   int category;
   int zero = 0;
-  vector <uint8_t> out;
+
+  vector< pair<uint8_t,short> > out;
+
   int arr_size = *size;
   
   string s1, s2, s;
 
-  // we work with 8x8 blocks
   //if (arr_size != 64) return NULL;
   
   j = 0;
@@ -146,62 +113,72 @@ uint8_t *rle_AC(short bytes[], int *size) {
       zero++;
       if (zero>15) {
         zero = 0;
-        s = huff_bits(240, 8);  // 8 bits result
-        out.push_back(makeByte(s));   // put zeros and ones to 8bit variable
+        s = to_bits(240, 8);  // 8 bits result
+        //out.push_back(makeByte(s));   // put zeros and ones to 8bit variable
+        out.push_back(make_pair(makeByte(s), bytes[i]));
         j++;
       }
       else if ((i+1) == arr_size) {
         if (zero>0) {
-          out.push_back(makeByte("00000000"));  // EOB (End of Block)
+          // out.push_back(makeByte("00000000"));  // EOB (End of Block)
+          out.push_back(make_pair(makeByte(s), bytes[i]));  // put zeros and ones to 8bit variable
         }
         break;
       } 
       
       continue;
     }
-    
-    category = ceil(log2(abs(bytes[i])));
+   
+    category = get_category_AC(abs(bytes[i]));
+    // if (category == -1) return NULL;
 
-    s1 = huff_bits(zero, 4);      // 4 bits - other half of result
-    s2 = huff_bits(category, 4);  // 4 bits - first half of result
+    s1 = to_bits(zero, 4);      // 4 bits - first half of result
+    s2 = to_bits(category, 4);  // 4 bits - other half of result
     s = s1 + s2;
-    // cout << " ~" << s << "~ " << endl;
 
-    out.push_back(makeByte(s));   // put zeros and ones to 8bit variable
-    
+    out.push_back(make_pair(makeByte(s), bytes[i]));  // put zeros and ones to 8bit variable
+     
     j++;
     zero = 0;
   }
   
+  /*
   *size = out.size();
   uint8_t *outAC;
   outAC = (uint8_t *) malloc (*size * sizeof(uint8_t));
+  if (outAC == NULL) return NULL;
   
   for (i = 0; i<*size; i++) {
     outAC[i] = out[i];
   }
+  */
 
-  return outAC;
+  return out;
   
 }
 
 /*
 int main(int argc, char* argv[]) {
   int i;
-  // size - in dcmp_DC - 64 means first block, 128 n-th block
   int n = 64;
-  // test - values for rle_AC
-  short bytes[64] = {0, 0, 0, 0, 52, 0, -250, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0}; // 0..65535
 
-  // short outDC[128];
-  // dpcm_DC(bytes, n, outDC);  // bytes could be array filled with random values
+  short bytes[64] = {0, 0, 0, 0, 52, 0, -250, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0};
+
+  //short *outDC = dc_Y(bytes, n);
   
-  // rle_AC will create an array of appropriate size
-  uint8_t *outAC = rle_AC(bytes, &n);
-  for (i=0; i<n; i++) {
-    cout << (int) outAC[i] << " ";
+  //for (i=0; i<n; i++) {
+  //  cout << (int) outDC[i] << " ";
+  //}
+  //cout << endl;
+  
+  
+  vector< pair<uint8_t,short> > ac = rlc_AC(bytes, &n);
+  vector< pair<uint8_t,short> >::iterator it;
+  
+  for(it = ac.begin(); it != ac.end(); ++it) {
+    cout << hex << (int) it->first << " - " << dec << it->second << endl;
   }
-  cout << endl;
   
   return 0;
-} */
+}
+*/
