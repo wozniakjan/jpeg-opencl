@@ -12,7 +12,7 @@ SRC   = src/
 BIN   = bin/
 FLAGS = -std=c++98 -Wall -pedantic -w
 CC    = g++
-OBJS  = $(shell ls src/*cpp | sed s/src/bin/g | sed s/cpp/o/g) 
+OBJS  = $(shell ls src/*cpp | sed s/src/bin/g | sed s/cpp/o/g)
 DOC   = dokumentace
 
 
@@ -25,7 +25,7 @@ ifeq ($(OS), CYGWIN_NT-5.1)
 	CL_FLAGS=
 else
 	LIBS=-lOpenCL
-	CL_FLAGS=-I/usr/local/share/cuda/include/ #-L/opt/AMDAPP/lib/ -I/opt/AMDAPP/include/
+	CL_FLAGS=-I/usr/local/cuda/include/ #-L/opt/AMDAPP/lib/ -I/opt/AMDAPP/include/
 endif
 endif
 
