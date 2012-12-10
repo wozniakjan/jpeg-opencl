@@ -33,9 +33,59 @@ Dále jsou v textu popsány vybrané algoritmy a porovnání paralelních varian
 
 \section{Teoretický rozbor} %asi by bylo vhodne lepe pojmenovat tuto kapitolu
 Schéma pipeline pro JPEG kompresi na obrazku \ref{pipeline} obsahuje barevně odlišené bloky, což jsou algoritmy,
-které jsme se rozhodli paralelizovat. Mezi jednotlivými bloky jsou uvedeny i datové typy, jaké mezi nimi proudí.
+které jsme se rozhodli paralelizovat. Mezi jednotlivými bloky jsou uvedeny i datové typy, jaké jsou mezi výstupem
+jednoho bloku a vstupem druhého bloku očekávány.
+
+\textit{Převod barevného modelu}
+
+\textit{Diskrétní kosínova transformace} slouží k převodu obrazu z prostorové domény do frekvenční domény. V normě JPEG
+je definováno 6 variant, z nichž nejčastěji používaná Baseline DCT, kterou jsme také v rámci projektu implementovali\cite{mul}. 
+Po aplikaci kosínové transformace dostaneme dvě složky koeficientů -- stejnosměrnou (AC) a střídavou (DC). Tyto složky
+se dále v algoritmu komprimují zvlášť. Vzorce \ref{dct1}, \ref{dct2} a \ref{dct3} jsou matematickým zápisem DCT,
+kde platí, že \textit{N} je pro JPEG blok rovno 8.
+\begin{eqnarray}
+\lambda_x &=& \left\{ \begin{array}{r@{\quad}c}
+    \frac{1}{\sqrt{2}}, & x = 0 \\
+    1, & x \neq 0\\ 
+\end{array} \right.\label{dct1}\\
+g_{k,j}[n,m] &=& \lambda_k \lambda_j \frac{2}{N} cos\left[\frac{k \pi}{N}\left(n+\frac{1}{2}\right)\right] cos\left[\frac{j \pi}{N}\left(m+\frac{1}{2}\right)\right]\label{dct2}\\
+c[k,j] &=& \sum^{N-1}_{n=0}{\sum^{N-1}_{m=0}{f[n,m]g_{k,j}[n,m]}}\label{dct3}
+\end{eqnarray}
+
+
+\textit{Kvantizace} je implementována pomocí dvou tabulek, zvlášť pro jasovou složku a chrominescenční složky. Hodnota v 
+bloku je nejprve vydělena přislušnou hodnotou v tabulce, zaokrouhlena a poté vynásobena stejnou hodnotou z tabulky.
+Pro kvantizaci je definováno několik vhodných tabulek\cite{t81}.
+
+\textit{Huffmanovo kódování}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=15cm]{pipeline.pdf}
+  \caption{Schéma JPEG encode pipeline.}
+  \label{pipeline}
+\end{figure}
 
 \section{Implementace}
+Celý projekt je rozdělen do několika modulů
+\begin{itemize}
+\item \texttt{ahed} -- 
+\item \texttt{cl\_util} -- funkce potřebné pro práci s OpenCL, jednotlivé kernely jsou v souboru \texttt{jpeg.cl}.
+\item \texttt{color\_transform} -- 
+\item \texttt{dpcm\_rle} -- 
+\item \texttt{huffman} -- 
+\item \texttt{jpeg\_util} -- tvorba a čtení JPEG markerů a další pomocné funkce pro JPEG, které nemají samostaný
+modul (zig-zag, kvantizace, DCT ...).
+\item \texttt{main} -- funkce \texttt{main} a časová měření algoritmů.
+\end{itemize}
+\textit{Diskrétní kosínova transformace} je implementována pomocí funkcí
+
+\texttt{void dct8x8(float* block, float* dct, int* table)} -- sériově
+
+\texttt{void dct8x8\_gpu(float* block, float* dst, cl\_mem* table)} -- paralélně\\
+kde prvním argumentem jsou data bloku vstupujícího do DCT, druhým argumentem pole pro výstupní AC a DC koeficienty DCT
+a třetím argumentem je kvantizační tabulka, neboť v rámci optimalizace jsme sjednotili kvantizaci s DCT.
+
 
 \section{Závěr}
 Výsledkem naší práce je srovnání rychlosti implementací na těchto strojích.
@@ -78,10 +128,11 @@ Hodnoty měření jsou uvedeny v milisekundách, porovnávány jsou paralelní v
 %
 \begin{thebibliography}{MM}%
 % Vzor: \bi{label}{Název}{Poznámky.}{http://www.adresa.cz/}%
-\bi{wiki}{Wikipedia, the free encyclopedia}{\citdatum[2012-12-10]}
-    {http://en.wikipedia.org/}
 \bi{t81}{Recommendation T.81}{\citdatum[2012-12-10]}
     {http://www.w3.org/Graphics/JPEG/itu-t81.pdf}
-%
+\bibitem{mul}{D. Bařina. \textit{Diskrétní kosínová transformace -- prezentace ke cvičení}. \citdatum[2008-12-08].\\
+    $<$\url{http://www.fit.vutbr.cz/study/course-l.php.cs?id=8766}$>$}
+\bi{wiki}{Wikipedia, the free encyclopedia}{\citdatum[2012-12-10]}
+    {http://en.wikipedia.org/}
 \end{thebibliography}}
 \end{document}
