@@ -91,3 +91,76 @@ __kernel void dct8x8 ( __global float * in, __global float * out, __global int *
         out[index] = my_round(out[index]/table[index])*table[index];
     }
 }
+
+__kernel void inv_dct8x8 ( __global float * in, __global float * out ) {
+    int m = get_global_id(0);
+    int n = get_global_id(1);
+
+    if(m < 8 && n < 8){
+        int index = n*8+m;
+        out[index] = in[0]*g(0,0,n,m);
+        out[index] += in[1]*g(0,1,n,m);
+        out[index] += in[2]*g(0,2,n,m);
+        out[index] += in[3]*g(0,3,n,m);
+        out[index] += in[4]*g(0,4,n,m);
+        out[index] += in[5]*g(0,5,n,m);
+        out[index] += in[6]*g(0,6,n,m);
+        out[index] += in[7]*g(0,7,n,m);
+        out[index] += in[8]*g(1,0,n,m);
+        out[index] += in[9]*g(1,1,n,m);
+        out[index] += in[10]*g(1,2,n,m);
+        out[index] += in[11]*g(1,3,n,m);
+        out[index] += in[12]*g(1,4,n,m);
+        out[index] += in[13]*g(1,5,n,m);
+        out[index] += in[14]*g(1,6,n,m);
+        out[index] += in[15]*g(1,7,n,m);
+        out[index] += in[16]*g(2,0,n,m);
+        out[index] += in[17]*g(2,1,n,m);
+        out[index] += in[18]*g(2,2,n,m);
+        out[index] += in[19]*g(2,3,n,m);
+        out[index] += in[20]*g(2,4,n,m);
+        out[index] += in[21]*g(2,5,n,m);
+        out[index] += in[22]*g(2,6,n,m);
+        out[index] += in[23]*g(2,7,n,m);
+        out[index] += in[24]*g(3,0,n,m);
+        out[index] += in[25]*g(3,1,n,m);
+        out[index] += in[26]*g(3,2,n,m);
+        out[index] += in[27]*g(3,3,n,m);
+        out[index] += in[28]*g(3,4,n,m);
+        out[index] += in[29]*g(3,5,n,m);
+        out[index] += in[30]*g(3,6,n,m);
+        out[index] += in[31]*g(3,7,n,m);
+        out[index] += in[32]*g(4,0,n,m);
+        out[index] += in[33]*g(4,1,n,m);
+        out[index] += in[34]*g(4,2,n,m);
+        out[index] += in[35]*g(4,3,n,m);
+        out[index] += in[36]*g(4,4,n,m);
+        out[index] += in[37]*g(4,5,n,m);
+        out[index] += in[38]*g(4,6,n,m);
+        out[index] += in[39]*g(4,7,n,m);
+        out[index] += in[40]*g(5,0,n,m);
+        out[index] += in[41]*g(5,1,n,m);
+        out[index] += in[42]*g(5,2,n,m);
+        out[index] += in[43]*g(5,3,n,m);
+        out[index] += in[44]*g(5,4,n,m);
+        out[index] += in[45]*g(5,5,n,m);
+        out[index] += in[46]*g(5,6,n,m);
+        out[index] += in[47]*g(5,7,n,m);
+        out[index] += in[48]*g(6,0,n,m);
+        out[index] += in[49]*g(6,1,n,m);
+        out[index] += in[50]*g(6,2,n,m);
+        out[index] += in[51]*g(6,3,n,m);
+        out[index] += in[52]*g(6,4,n,m);
+        out[index] += in[53]*g(6,5,n,m);
+        out[index] += in[54]*g(6,6,n,m);
+        out[index] += in[55]*g(6,7,n,m);
+        out[index] += in[56]*g(7,0,n,m);
+        out[index] += in[57]*g(7,1,n,m);
+        out[index] += in[58]*g(7,2,n,m);
+        out[index] += in[59]*g(7,3,n,m);
+        out[index] += in[60]*g(7,4,n,m);
+        out[index] += in[61]*g(7,5,n,m);
+        out[index] += in[62]*g(7,6,n,m);
+        out[index] += in[63]*g(7,7,n,m);
+    }
+}

@@ -32,6 +32,24 @@ int chrominace_table[] = {
     99,  99,  99,  99,  99,  99,  99,  99, 
 };
 
+void load_table(char* table_file, int* table){
+    ifstream f;
+    f.open(table_file);
+    
+    string val;
+    int val_i = 0;
+
+    if(f.is_open()){
+        for(int index = 0; index < 64 && !f.eof(); index++){
+            f >> val;
+            cout << index << "[" << val << "] "; 
+            val_i = atoi(val.c_str());
+            table[index] = val_i;
+        }
+    }
+    f.close();
+}
+
 float lambda(int k){
     if(k==0) return 1.0f/sqrtf(2.0f);
     else return 1;

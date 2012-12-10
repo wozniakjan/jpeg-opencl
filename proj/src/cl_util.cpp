@@ -16,7 +16,8 @@ cl_uint dev_limit = 1;
 cl_context context;
 cl_command_queue queue;
 cl_program program;
-cl_kernel kernel;
+cl_kernel dct_kernel;
+cl_kernel inv_dct_kernel;
 cl_int error;
 
 //buffers for dct
@@ -78,8 +79,12 @@ int initOpenCL(){
     queue = clCreateCommandQueue(context, devices[0], 0, &error);
     checkClError(error, "clCreateCommandQueue");
 
-    // Load kernel
-    error = loadKernelFromFile("../src/jpeg.cl");
+    // Load dct kernel
+    error = loadDctKernelFromFile("../src/jpeg.cl");
+    checkClError(error, "loadKernelFromFile");
+
+    // Load inv dct kernel
+    error = loadInvDctKernelFromFile("../src/jpeg.cl");
     checkClError(error, "loadKernelFromFile");
 
     // Alloc buffers & copy data to src buffer
@@ -117,7 +122,7 @@ int initOpenCL(){
 }
 
 
-cl_int loadKernelFromFile(const char* fileName){
+cl_int loadDctKernelFromFile(const char* fileName){
     ifstream src_file(fileName);
     if(!src_file.is_open()) return EXIT_FAILURE;
 
@@ -131,7 +136,28 @@ cl_int loadKernelFromFile(const char* fileName){
     error = clBuildProgram(program, dev_count, devices, NULL, NULL, NULL);
     checkClError(error, "clBuildProgram");
 
-    kernel = clCreateKernel(program, "dct8x8", &error);
+    dct_kernel = clCreateKernel(program, "dct8x8", &error);
+    checkClError(error, "clCreateKernel");
+
+    return CL_SUCCESS;
+}
+
+
+cl_int loadInvDctKernelFromFile(const char* fileName){
+    ifstream src_file(fileName);
+    if(!src_file.is_open()) return EXIT_FAILURE;
+
+    string src_prog(istreambuf_iterator<char>(src_file), (istreambuf_iterator<char>()));
+    const char *src = src_prog.c_str();
+    size_t length = src_prog.length();
+
+    program = clCreateProgramWithSource(context, 1, &src, &length, &error);
+    checkClError(error, "clCreatePogramWithSource");
+
+    error = clBuildProgram(program, dev_count, devices, NULL, NULL, NULL);
+    checkClError(error, "clBuildProgram");
+
+    inv_dct_kernel = clCreateKernel(program, "inv_dct8x8", &error);
     checkClError(error, "clCreateKernel");
 
     return CL_SUCCESS;
@@ -151,9 +177,9 @@ void dct8x8_gpu(float* src, float* dst, cl_mem* table){
             NULL);     //wait list
     checkClError(error,"clEnqueueWriteBuffer");
 
-    clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&block_src);
-    clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&block_dst);
-    clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)table);
+    clSetKernelArg(dct_kernel, 0, sizeof(cl_mem), (void *)&block_src);
+    clSetKernelArg(dct_kernel, 1, sizeof(cl_mem), (void *)&block_dst);
+    clSetKernelArg(dct_kernel, 2, sizeof(cl_mem), (void *)table);
 
     size_t GWS[2], LWS[2];
     GWS[0] = 8;
@@ -161,13 +187,41 @@ void dct8x8_gpu(float* src, float* dst, cl_mem* table){
     LWS[0] = 8;
     LWS[1] = 8;
 
-    clEnqueueNDRangeKernel(queue, kernel, 2, NULL, GWS, LWS, 0, NULL, NULL);
+    clEnqueueNDRangeKernel(queue, dct_kernel, 2, NULL, GWS, LWS, 0, NULL, NULL);
 
     clEnqueueReadBuffer(queue, block_dst, CL_TRUE, 0, sizeof(cl_float)*64, dst, 0, NULL, NULL);
 
     clFinish(queue);
 }
 
+void inv_dct8x8_gpu(float* src, float* dst){
+    // Copy data from memory to gpu
+    error = clEnqueueWriteBuffer(queue, 
+            block_src, //memory on gpu 
+            CL_TRUE,   //blocking write
+            0,         //offset
+            sizeof(cl_float)*64, //size in bytes of copied data 
+            src,       //memory data
+            0,         //wait list
+            NULL,      //wait list
+            NULL);     //wait list
+    checkClError(error,"clEnqueueWriteBuffer");
+
+    clSetKernelArg(inv_dct_kernel, 0, sizeof(cl_mem), (void *)&block_src);
+    clSetKernelArg(inv_dct_kernel, 1, sizeof(cl_mem), (void *)&block_dst);
+
+    size_t GWS[2], LWS[2];
+    GWS[0] = 8;
+    GWS[1] = 8;
+    LWS[0] = 8;
+    LWS[1] = 8;
+
+    clEnqueueNDRangeKernel(queue, inv_dct_kernel, 2, NULL, GWS, LWS, 0, NULL, NULL);
+
+    clEnqueueReadBuffer(queue, block_dst, CL_TRUE, 0, sizeof(cl_float)*64, dst, 0, NULL, NULL);
+
+    clFinish(queue);
+}
 
 /**
  * Vrati retezec pro opencl error kod
@@ -289,4 +343,30 @@ void CL_CALLBACK contextCallback(const char *err_info,
                                  void *user_data){
     cout << "ERROR during context use: " << err_info << endl;
     exit(EXIT_FAILURE);
+}
+
+
+double get_time(void)
+{
+#if _WIN32  		
+    static int initialized = 0;
+    static LARGE_INTEGER frequency;
+    LARGE_INTEGER value;
+
+    if (!initialized) {
+        initialized = 1;
+        if (QueryPerformanceFrequency(&frequency) == 0)         {                   
+            exit(-1);
+        }
+    }
+
+    QueryPerformanceCounter(&value);
+    return (double)value.QuadPart / (double)frequency.QuadPart; 
+#else
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) == -1) {      
+        exit(-2);
+    }
+    return (double)tv.tv_sec + (double)tv.tv_usec/1000000.;
+#endif
 }

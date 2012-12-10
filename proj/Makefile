@@ -6,13 +6,15 @@
 
 
 
-OS    = $(shell uname)
-PROJ  = jpeg_conv
-SRC   = src/
-BIN   = bin/
-FLAGS = -std=c++98 -Wall -pedantic -w
-CC    = g++
-OBJS  = $(shell ls src/*cpp | sed s/src/bin/g | sed s/cpp/o/g) 
+OS     = $(shell uname)
+PROJ   = jpeg_conv
+SRC    = src/
+BIN    = bin/
+FLAGS  = -std=c++98 -Wall -pedantic -w
+CC     = g++
+OBJS   = $(shell ls src/*cpp | sed s/src/bin/g | sed s/cpp/o/g) 
+OPENCV = `pkg-config --cflags opencv` `pkg-config --libs opencv`
+
 
 ifeq ($(OS), Darwin)
 	LIBS=-framework OpenCL
