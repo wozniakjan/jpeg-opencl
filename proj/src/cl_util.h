@@ -7,6 +7,12 @@
 #include <CL/cl.h>
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/time.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -22,7 +28,8 @@ extern cl_mem cl_chrominace_table;
 
 int initOpenCL();
 double getTime();
-cl_int loadKernelFromFile(const char* cFilename);
+cl_int loadDctKernelFromFile(const char* cFilename);
+cl_int loadInvDctKernelFromFile(const char* cFilename);
 void checkClError(cl_int err, char* debug);
 const char *CLErrorString(cl_int _err);
 void CL_CALLBACK contextCallback(const char *err_info, 
@@ -30,6 +37,6 @@ void CL_CALLBACK contextCallback(const char *err_info,
                                  size_t cb,
                                  void *user_data);
 void dct8x8_gpu(float* src, float* dst, cl_mem* table);
-
-
+void inv_dct8x8_gpu(float* src, float* dst);
+double get_time();
 #endif 

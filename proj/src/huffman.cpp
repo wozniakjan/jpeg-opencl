@@ -13,42 +13,34 @@ FF C4 00 B5 11 00 02 01 02 04 04 03 04 07 05 04 04 00 01 02 77 00 01 02 03 11 04
 
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <string.h>
-#include <stdint.h>
-#include <map>
-#include <vector>
+#include "dpcm_rle.h"
 
-
-using namespace std;
 
 /*
       delka     |~> pocty symbolu pro delky kodovych slov 1-16  ~|
 FF C4 00 1F 00   00 01 05 01 01 01 01 01 01 00 00 00 00 00 00 00   00 01 02 03 04 05 06 07 08 09 0A 0B
-             l~> "000" musi byt vzdy + "0"=DC + "0000"=tabulka pro barvove slozky Y se symb. DC koeficientu
+             l~> "000" musi byt vzdy + "0"=DC + "0000"=tabulka pro barvove slozky Y
  */
-void huffmanTable_0DC(map<unsigned char, string> &ht ) {
+void huffmanTable_0DC(map<short, string> &ht ) {
 
-  ht.insert(pair <unsigned char, string> (0x00, "00"));
-  ht.insert(pair <unsigned char, string> (0x01, "010"));
-  ht.insert(pair <unsigned char, string> (0x02, "011"));
-  ht.insert(pair <unsigned char, string> (0x03, "100"));
-  ht.insert(pair <unsigned char, string> (0x04, "101"));
-  ht.insert(pair <unsigned char, string> (0x05, "110"));
-  ht.insert(pair <unsigned char, string> (0x06, "1110"));
-  ht.insert(pair <unsigned char, string> (0x07, "11110"));
-  ht.insert(pair <unsigned char, string> (0x08, "111110"));
-  ht.insert(pair <unsigned char, string> (0x09, "1111110"));
-  ht.insert(pair <unsigned char, string> (0x0A, "11111110"));
-  ht.insert(pair <unsigned char, string> (0x0B, "111111110"));
+  ht.insert(pair <short, string> (0x00, "00"));
+  ht.insert(pair <short, string> (0x01, "010"));
+  ht.insert(pair <short, string> (0x02, "011"));
+  ht.insert(pair <short, string> (0x03, "100"));
+  ht.insert(pair <short, string> (0x04, "101"));
+  ht.insert(pair <short, string> (0x05, "110"));
+  ht.insert(pair <short, string> (0x06, "1110"));
+  ht.insert(pair <short, string> (0x07, "11110"));
+  ht.insert(pair <short, string> (0x08, "111110"));
+  ht.insert(pair <short, string> (0x09, "1111110"));
+  ht.insert(pair <short, string> (0x0A, "11111110"));
+  ht.insert(pair <short, string> (0x0B, "111111110"));
 
 }
 
 /*
 
-      "000" musi byt vzdy + "1"=AC + "0000"=tabulka pro barvove slozky Y se symb. DC koeficientu
+      "000" musi byt vzdy + "1"=AC + "0000"=tabulka pro barvove slozky Y
 
       delka     |~> pocty symbolu pro delky kodovych slov 1-16  ~|
 FF C4 00 B5 10   00 02 01 03 03 02 04 03 05 05 04 04 00 00 01 7D   01 02 03 00 04 11 05 12 21 31 41 06 13 51 61 07 22 71 14 32 81 91 A1 08 23 42 B1 C1 15 52 D1 F0 24 33 62 72 82 09 0A 16 17 18 19 1A 25 26 27 28 29 2A 34 35 36 37 38 39 3A 43 44 45 46 47 48 49 4A 53 54 55 56 57 58 59 5A 63 64 65 66 67 68 69 6A 73 74 75 76 77 78 79 7A 83 84 85 86 87 88 89 8A 92 93 94 95 96 97 98 99 9A A2 A3 A4 A5 A6 A7 A8 A9 AA B2 B3 B4 B5 B6 B7 B8 B9 BA C2 C3 C4 C5 C6 C7 C8 C9 CA D2 D3 D4 D5 D6 D7 D8 D9 DA E1 E2 E3 E4 E5 E6 E7 E8 E9 EA F1 F2 F3 F4 F5 F6 F7 F8 F9 FA
@@ -247,20 +239,20 @@ void huffmanTable_0AC(map<unsigned char, string> &ht ) {
 FF C4 00 IF 01   00 03 01 01 01 01 01 01 01 01 01 00 00 00 00 00   00 01 02 03 04 05 06 07 08 09 0A 0B
              l~> "000" musi byt vzdy + "0"=DC + "0001"=barvove slozky CbCr
  */
-void huffmanTable_1DC(map<unsigned char, string> &ht ) {  
+void huffmanTable_1DC(map<short, string> &ht ) {  
 
-  ht.insert(pair <unsigned char, string> (0x00, "00"));
-  ht.insert(pair <unsigned char, string> (0x01, "01"));
-  ht.insert(pair <unsigned char, string> (0x02, "10"));
-  ht.insert(pair <unsigned char, string> (0x03, "110"));
-  ht.insert(pair <unsigned char, string> (0x04, "1110"));
-  ht.insert(pair <unsigned char, string> (0x05, "11110"));
-  ht.insert(pair <unsigned char, string> (0x06, "111110"));
-  ht.insert(pair <unsigned char, string> (0x07, "1111110"));
-  ht.insert(pair <unsigned char, string> (0x08, "11111110"));
-  ht.insert(pair <unsigned char, string> (0x09, "111111110"));
-  ht.insert(pair <unsigned char, string> (0x0A, "1111111110"));
-  ht.insert(pair <unsigned char, string> (0x0B, "11111111110"));
+  ht.insert(pair <short, string> (0x00, "00"));
+  ht.insert(pair <short, string> (0x01, "01"));
+  ht.insert(pair <short, string> (0x02, "10"));
+  ht.insert(pair <short, string> (0x03, "110"));
+  ht.insert(pair <short, string> (0x04, "1110"));
+  ht.insert(pair <short, string> (0x05, "11110"));
+  ht.insert(pair <short, string> (0x06, "111110"));
+  ht.insert(pair <short, string> (0x07, "1111110"));
+  ht.insert(pair <short, string> (0x08, "11111110"));
+  ht.insert(pair <short, string> (0x09, "111111110"));
+  ht.insert(pair <short, string> (0x0A, "1111111110"));
+  ht.insert(pair <short, string> (0x0B, "11111111110"));
 
 }
 
@@ -453,10 +445,158 @@ void huffmanTable_1AC(map<unsigned char, string> &ht ) {
 
 }
 
-int encode (unsigned char bytes[], int size, map<unsigned char, string> huff) {
+ 
+int get_category_AC(short n) {
+  int c;
+  
+  if (n == 1) c = 1;
+  else if (n == 2 || n == 3) c = 2;
+  else if (n >= 4 && n <= 7) c = 3;
+  else if (n >= 8 && n <= 15) c = 4;
+  else if (n >= 16 && n <= 31) c = 5;
+  else if (n >= 32 && n <= 63) c = 6;
+  else if (n >= 64 && n <= 127) c = 7;
+  else if (n >= 128 && n <= 255) c = 8;
+  else if (n >= 256 && n <= 511) c = 9;
+  else if (n >= 512 && n <= 1023) c = 10;
+  else return -1;
+      
+  return c;
+} 
+ 
+int get_category_DC(short n) {
+  int c;
+  
+  if (n == 0) c = 0;
+  else if (n == 1) c = 1;
+  else if (n == 2 || n == 3) c = 2;
+  else if (n >= 4 && n <= 7) c = 3;
+  else if (n >= 8 && n <= 15) c = 4;
+  else if (n >= 16 && n <= 31) c = 5;
+  else if (n >= 32 && n <= 63) c = 6;
+  else if (n >= 64 && n <= 127) c = 7;
+  else if (n >= 128 && n <= 255) c = 8;
+  else if (n >= 256 && n <= 511) c = 9;
+  else if (n >= 512 && n <= 1023) c = 10;
+  else if (n >= 1024 && n <= 2047) c = 11;
+  else return -1;
+      
+  return c;
+}
+
+
+int encode_AC (vector< pair<uint8_t,short> > bytes, int size, map<uint8_t, string> huff) {
   int i, j;
   int k = 0;
+  int category;
   string encoded;
+  short abs_n;
+  
+  vector< pair<uint8_t,short> >::iterator it;
+
+  FILE *outputFile;
+  outputFile = fopen ("test","w");
+  if (outputFile == NULL) {
+    return 1;
+  }
+
+
+  for (it = bytes.begin(); it != bytes.end(); ++it) {
+
+    encoded = encoded + huff[it->first];
+    
+    // if we are dealing with non-zero values 
+    if (it->first != 0x00 && it->first != 0xF0) {
+      abs_n = abs(it->second);
+      category = get_category_AC(abs_n);
+
+      // the same as with DC coeficients
+      //  negative value:  to_bits(value-1, category-bits)
+      //  positive value:  to_bits(value, category-bits)
+      if (it->second < 0) {
+        encoded = encoded + to_bits(it->second-1, category);
+      }
+      // otherwise, the same with "difference"
+      else {
+        encoded = encoded + to_bits(it->second, category);
+      }      
+      
+    }
+  }
+
+  int chars = ceil((double) encoded.length()/8);
+
+  unsigned char *encoded_bytes;
+  encoded_bytes = (unsigned char *) malloc (chars * sizeof(unsigned char));
+  if (encoded_bytes == NULL) {
+    return 1;
+  }
+    
+  for (i = 0; i < chars; i++) {
+    unsigned char c = 0;
+    
+    // shift zeros and ones to the variable
+    for (j = 0; j < 8; j++) {
+      c <<= 1;
+      if (encoded[k] == '1')
+        c += 1;
+      else 
+        c += 0;
+      
+      k++;
+    }
+    
+    // save to array
+    encoded_bytes[i] = c;
+    
+    fprintf(outputFile, "%c", c);
+  }
+
+  return 0;  
+}
+
+
+/* ----------------------------------------------------------------------- */
+
+void huffEncode_1AC(vector< pair<uint8_t,short> > bytes, int size) {
+  map<uint8_t, string> ht_1AC;
+  map<uint8_t, string>::iterator it;
+  
+  huffmanTable_1AC(ht_1AC);
+  //cout << "Huffman table (1AC) - size: " << ht_1AC.size() << endl;
+
+  encode_AC(bytes, size, ht_1AC);
+}
+
+void huffEncode_0AC(vector< pair<uint8_t,short> > bytes, int size) {
+  map<uint8_t, string> ht_0AC;
+  map<uint8_t, string>::iterator it;
+  
+  huffmanTable_0AC(ht_0AC);
+  //cout << "Huffman table (0AC) - size: " << ht_0AC.size() << endl;
+
+  encode_AC(bytes, size, ht_0AC);
+}
+
+
+//-----------------------------------------------------------------------------
+
+/* huffmanovo kodovani vypocitava diferencni kategorii hodnoty koeficientu. pak bude na vystupu hodnota ve formatu "KD", kde:
+  - K je kategorie diference (pocet bitu, na kterych lze zapsat hodnotu koeficientu)
+  - D je diference hodnoty koeficientu v bin. kodu (podle stanov)
+
+ */
+
+/*
+  Prijde mi 8x8 diferenci. 
+  Vezmu diferenci, najdu jeji kategorii, tu zakoduju a samotnou diferenci bin. zakodovanou hodim za to.
+ */
+int encode_DC(short bytes[], int size, map<short, string> huff) {
+  int i, j;
+  int k = 0;
+  int category;
+  string encoded;
+  short abs_n;
 
   /*
   FILE *outputFile;
@@ -465,12 +605,28 @@ int encode (unsigned char bytes[], int size, map<unsigned char, string> huff) {
     return 1;
   }
   */
-
+  
+  // go through differences and encode them
   for (i = 0; i < size; i++) {    
-    encoded = encoded + huff[bytes[i]];
+    abs_n = abs(bytes[i]);
+    category = get_category_DC(abs_n);
+    if (category == -1) return NULL;
+         
+    // cout << (int) bytes[i] << ": " << huff[bytes[i]] << endl;
+    encoded = encoded + huff[category];
+    
+    // if the difference is a negative number, add "difference-1" in binary to encoded stream
+    if (bytes[i] < 0) {
+      encoded = encoded + to_bits(bytes[i]-1, category);
+    }
+    // otherwise, the same with "difference"
+    else {
+      encoded = encoded + to_bits(bytes[i], category);
+    }
   }
 
-  int chars = encoded.length()/8;
+  int chars = ceil((double) encoded.length()/8);
+  cout << chars << endl;
 
   unsigned char *encoded_bytes;
   encoded_bytes = (unsigned char *) malloc (chars * sizeof(unsigned char));
@@ -502,62 +658,50 @@ int encode (unsigned char bytes[], int size, map<unsigned char, string> huff) {
 }
 
 
-/* ----------------------------------------------------------------------- */
-
-void huffEncode_1AC(unsigned char bytes[], int size) {
-  map<unsigned char, string> ht_1AC;
-  map<unsigned char, string>::iterator it;
-  
-  huffmanTable_1AC(ht_1AC);
-  //cout << "Huffman table (1AC) - size: " << ht_1AC.size() << endl;
-
-  encode(bytes, size, ht_1AC);
-}
-
-void huffEncode_0AC(unsigned char bytes[], int size) {
-  map<unsigned char, string> ht_0AC;
-  map<unsigned char, string>::iterator it;
-  
-  huffmanTable_0AC(ht_0AC);
-  //cout << "Huffman table (0AC) - size: " << ht_0AC.size() << endl;
-
-  encode(bytes, size, ht_0AC);
-}
-
-void huffEncode_1DC(unsigned char bytes[], int size) {
-  map<unsigned char, string> ht_1DC;
-  map<unsigned char, string>::iterator it;
+void huffEncode_1DC(short bytes[], int size) {
+  map<short, string> ht_1DC;
+  map<short, string>::iterator it;
   
   huffmanTable_1DC(ht_1DC);
   //cout << "Huffman table (1DC) - size: " << ht_1DC.size() << endl;
 
-  encode(bytes, size, ht_1DC);
+  encode_DC(bytes, size, ht_1DC);
 }
 
-void huffEncode_0DC(unsigned char bytes[], int size) {
+void huffEncode_0DC(short bytes[], int size) {
 
-  map<unsigned char, string> ht_0DC;
-  map<unsigned char, string>::iterator it;
+  map<short, string> ht_0DC;
+  map<short, string>::iterator it;
   
   huffmanTable_0DC(ht_0DC);
   //cout << "Huffman table (0DC) - size: " << ht_0DC.size() << endl;
   
-  encode(bytes, size, ht_0DC);
-    
+  encode_DC(bytes, size, ht_0DC);    
 }
 
 /*
 int main(int argc, char* argv[]) {
 
-  int n = 64;
-  unsigned char bytes[64];
-  for (int i=0; i<n; i++) {
-    bytes[i] = 0x00 + i;
-  }
+  int n = 64; 
+
+  // AC test
+  //uint8_t bytes[7] = {0x46, 0x18, 0xF0, 0x05, 0xF0, 0xF0, 0x00};
+  //short bytes[64] = {0, 0, -32, 0, 32, 18, -18};
   
-  huffEncode_1AC(bytes, n);
+  //for (int i=0; i<n; i++) {
+  //  bytes[i] = 0x00 + i;
+  //}
+  
+  vector< pair<uint8_t,short> > vec;
+  vec.push_back(make_pair(0x46, 52));
+  vec.push_back(make_pair(0x18, -250));
+  vec.push_back(make_pair(0xf0, 0));
+  vec.push_back(make_pair(0x05, 16));  
+  vec.push_back(make_pair(0xf0, 0));
+  vec.push_back(make_pair(0x00, 0));    
+  
+  huffEncode_1AC(vec, n);
     
     return 0;
 }
 */
-
