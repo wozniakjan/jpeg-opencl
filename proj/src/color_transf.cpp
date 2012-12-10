@@ -12,26 +12,15 @@
     G = Y - 0.34414 (Cb-128) - 0.71414 (Cr-128)
     B = Y + 1.772   (Cb-128)
 
-Na vstupu mame soubor TGA typu 24 bpp - truecolor bez alfa kanalu.
+  Na vstupu mame soubor TGA typu 24 bpp - truecolor bez alfa kanalu.
 
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <iostream>
+#include "jpeg_util.h"
 
 using namespace std;
 
 #define BLOCK 1
-
-typedef struct {
-  unsigned int   width;
-  unsigned int   height;
-  unsigned char *pixels; // 0-255
-} pixmap;
-
-
 
 pixmap* createPixmap(unsigned int width, unsigned int height, unsigned int bytespp) {
     pixmap *p;
@@ -234,21 +223,26 @@ void rgb_to_ycbcr(pixmap * Y, pixmap *Cb, pixmap *Cr, pixmap *data) {
         for (i=0; i < data->width; i++) {
             float r, g, b, y, cb, cr; 
 
-            r = *p_rgb++;
-            g = *p_rgb++;
-            b = *p_rgb++;
+            r = *p_rgb;
+            *p_rgb++;
+            g = *p_rgb;
+            *p_rgb++;
+            b = *p_rgb;
+            *p_rgb++;
 
             y  = (unsigned char) ( 0.299  * r +0.587  * g + 0.114  * b);
             cb = (unsigned char) (-0.1687 * r -0.3313 * g + 0.5    * b + 128);
             cr = (unsigned char) ( 0.5    * r -0.4187 * g - 0.0813 * b + 128);
 
-            *p_y++  = y;
-            *p_cb++ = cb;
-            *p_cr++ = cr;
+            *p_y  = y;
+            *p_cb = cb;
+            *p_cr = cr;
+            
+            *p_y++;
+            *p_cb++;
+            *p_cr++;
         }
-    
     }
-    
 }
 
 
@@ -437,8 +431,8 @@ void saveTruecolorPixmap(pixmap *data, const char *imgname)
     cout << "image created!" << endl;
 }
 
-
-/*int main(int argc, char **argv) {
+/*
+int main(int argc, char **argv) {
   if (argc < 2) {
     cerr << "not enough arguments" << endl;
     return 1;
@@ -471,8 +465,5 @@ void saveTruecolorPixmap(pixmap *data, const char *imgname)
   saveTruecolorPixmap(dest, "reduced.tga");
   
   return 0;
-}*/
-
-
-
-
+}
+*/

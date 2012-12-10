@@ -26,6 +26,19 @@ cl_mem block_dst;
 cl_mem cl_luminace_table; 
 cl_mem cl_chrominace_table;
 
+// kernels, rgb>YCbCr
+cl_kernel kernel_y;
+cl_kernel kernel_cb;
+cl_kernel kernel_cr;
+
+// buffers for color transormation
+cl_mem src_y;
+cl_mem src_cb;
+cl_mem src_cr;
+cl_mem dst_y;
+cl_mem dst_cb;
+cl_mem dst_cr;
+
 //max number of local work items
 size_t max_work_item_size[3];
 size_t dct_max_local_work_item_size[3];
@@ -251,6 +264,111 @@ void inv_dct8x8_gpu(float* src, float* dst){
 
     clFinish(queue);
 }
+
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+cl_int loadKernelFromFile_ycbcr(const char* fileName, const char* kernel_name){
+    ifstream src_file(fileName);
+    if(!src_file.is_open()) return EXIT_FAILURE;
+
+    string src_prog(istreambuf_iterator<char>(src_file), (istreambuf_iterator<char>()));
+    const char *src = src_prog.c_str();
+    size_t length = src_prog.length();
+
+    program = clCreateProgramWithSource(context, 1, &src, &length, &error);
+    checkClError(error, "clCreatePogramWithSource");
+
+    error = clBuildProgram(program, dev_count, devices, NULL, NULL, NULL);
+    checkClError(error, "clBuildProgram");
+
+    kernel_y = clCreateKernel(program, kernel_name, &error);
+    checkClError(error, "clCreateKernel");
+
+    return CL_SUCCESS;
+}
+
+int initOpenCL_ycbcr(pixmap* data, cl_mem src_name, cl_mem dst_name, const char* kernel_name) {
+    error = getPlatformID();
+    checkClError(error, "getPlatformID");
+    
+    // Device
+    error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, dev_limit, devices, &dev_count);
+    checkClError(error, "clGetDeviceIDs");
+    
+    // Context
+    cl_context_properties contextProperties[] = {
+        CL_CONTEXT_PLATFORM, (cl_context_properties)platform, 0
+    };
+    context = clCreateContext(contextProperties, dev_num, devices, 
+                                         &contextCallback, NULL, &error);
+    checkClError(error, "clCreateContext");
+    
+    // Command-queue
+    queue = clCreateCommandQueue(context, devices[0], 0, &error);
+    checkClError(error, "clCreateCommandQueue");
+
+    // Load kernel
+    error = loadKernelFromFile_ycbcr("../src/ycbcr.cl", kernel_name);
+    checkClError(error, "loadKernelFromFile");
+
+    // Alloc buffers & copy data to src buffer
+    src_name = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uchar)*data->width*data->height, NULL, &error);
+    checkClError(error, "clCreateBuffer");
+    dst_name = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_uchar)*data->width*data->height, NULL, &error);
+    checkClError(error, "clCreateBuffer"); 
+}
+
+
+int initOpenCL_color_transform(pixmap* data){
+  initOpenCL_ycbcr(data, src_y, dst_y, "y");
+  initOpenCL_ycbcr(data, src_cb, dst_cb, "cb");
+  initOpenCL_ycbcr(data, src_cr, dst_cr, "cr");
+}
+
+void ycbcr_gpu(pixmap* data, pixmap* dst, cl_mem src_name, cl_mem dst_name, cl_kernel kernel_name){
+    // Copy data from memory to gpu
+    error = clEnqueueWriteBuffer(queue, 
+            src_name, //memory on gpu 
+            CL_TRUE,   //blocking write
+            0,         //offset
+            sizeof(cl_uchar)*data->width*data->height, //size in bytes of copied data 
+            data->pixels,      //memory data
+            0,         //wait list
+            NULL,      //wait list
+            NULL);     //wait list
+    checkClError(error,"clEnqueueWriteBuffer");
+
+    size_t GWS[2], LWS[2];
+    GWS[0] = data->height;
+    GWS[1] = data->width;
+    LWS[0] = data->height;
+    LWS[1] = data->width;
+    
+    clSetKernelArg(kernel_name, 0, sizeof(cl_mem), (void *)&src_name);
+    clSetKernelArg(kernel_name, 1, sizeof(cl_mem), (void *)data->width);
+    clSetKernelArg(kernel_name, 2, sizeof(cl_mem), (void *)&dst_name);
+
+    clEnqueueNDRangeKernel(queue, kernel_name, 2, NULL, GWS, LWS, 0, NULL, NULL);
+
+    clEnqueueReadBuffer(queue, dst_name, CL_TRUE, 0, sizeof(cl_uchar)*data->width*data->height, dst->pixels, 0, NULL, NULL);
+
+    clFinish(queue);
+}
+
+
+void color_transform_gpu(pixmap* data, pixmap* p_y, pixmap* p_cb, pixmap* p_cr) {
+  ycbcr_gpu(data, p_y, src_y, dst_y, kernel_y);
+  ycbcr_gpu(data, p_cb, src_cb, dst_cb, kernel_cb);
+  ycbcr_gpu(data, p_cr, src_cr, dst_cr, kernel_cr);
+
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+
 
 /**
  * Vrati retezec pro opencl error kod

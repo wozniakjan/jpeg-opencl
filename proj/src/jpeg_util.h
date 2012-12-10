@@ -2,6 +2,7 @@
 #define JPEG_UTIL_H
 
 #include <string>
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
@@ -108,5 +109,21 @@ class JpegPicture {
         void save_to_file(std::string file_name);
         float* get_block(int i);
 };
+
+
+// color transform
+
+typedef struct {
+  unsigned int   width;
+  unsigned int   height;
+  unsigned char *pixels; // 0-255
+} pixmap;
+
+pixmap * loadTGAdata (const char * imgname);
+void saveGrayscalePixmap(pixmap *data, const char *imgname);
+
+// melo by byt v cl_util.h, ale nemuzu to tam nacpat
+int initOpenCL_color_transform(pixmap* data);
+void color_transform_gpu(pixmap* data, pixmap* p_y, pixmap* p_cb, pixmap* p_cr);
 
 #endif
