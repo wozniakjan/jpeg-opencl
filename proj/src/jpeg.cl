@@ -1,5 +1,9 @@
 #define PI 3.14159265358979323846264338327950288
 
+float lambda(int k);
+float g(int k, int j, int n, int m);
+float my_round(float i);
+
 float lambda(int k){
     if(k==0) return 0.707106781186547524f;
     else return 1;

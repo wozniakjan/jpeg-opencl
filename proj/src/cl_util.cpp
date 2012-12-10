@@ -26,6 +26,10 @@ cl_mem block_dst;
 cl_mem cl_luminace_table; 
 cl_mem cl_chrominace_table;
 
+//max number of local work items
+size_t max_work_item_size[3];
+size_t dct_max_local_work_item_size[3];
+
 cl_int getPlatformID()
 {
     cl_uint num_platforms;
@@ -58,6 +62,28 @@ cl_int getPlatformID()
 }
 
 
+size_t set_dct_size(size_t i){
+    if(i>=8){
+        return 8;
+    }
+    else if(i<8 && i>=4){
+        return 4;
+    }
+    else if(i<4 && i>=2){
+        return 2;
+    }
+    else return 1;
+}
+
+void set_max_dct_device_worksize(){
+    error = clGetDeviceInfo(devices[0], CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(max_work_item_size), max_work_item_size, NULL);
+    checkClError(error, "clGetDeviceInfo");
+    dct_max_local_work_item_size[0] = set_dct_size(max_work_item_size[0]);
+    dct_max_local_work_item_size[1] = set_dct_size(max_work_item_size[1]);
+    dct_max_local_work_item_size[2] = set_dct_size(max_work_item_size[2]);
+    cout << dct_max_local_work_item_size[0] << " " << dct_max_local_work_item_size [1] << " " <<dct_max_local_work_item_size[2] << "\n";
+}
+
 
 int initOpenCL(){
     error = getPlatformID();
@@ -74,7 +100,10 @@ int initOpenCL(){
     context = clCreateContext(contextProperties, dev_num, devices, 
                                          &contextCallback, NULL, &error);
     checkClError(error, "clCreateContext");
-    
+   
+    //sets max number of workgroups
+    set_max_dct_device_worksize();
+
     // Command-queue
     queue = clCreateCommandQueue(context, devices[0], 0, &error);
     checkClError(error, "clCreateCommandQueue");
@@ -184,8 +213,8 @@ void dct8x8_gpu(float* src, float* dst, cl_mem* table){
     size_t GWS[2], LWS[2];
     GWS[0] = 8;
     GWS[1] = 8;
-    LWS[0] = 8;
-    LWS[1] = 8;
+    LWS[0] = dct_max_local_work_item_size[0];
+    LWS[1] = dct_max_local_work_item_size[1];
 
     clEnqueueNDRangeKernel(queue, dct_kernel, 2, NULL, GWS, LWS, 0, NULL, NULL);
 
@@ -213,8 +242,8 @@ void inv_dct8x8_gpu(float* src, float* dst){
     size_t GWS[2], LWS[2];
     GWS[0] = 8;
     GWS[1] = 8;
-    LWS[0] = 8;
-    LWS[1] = 8;
+    LWS[0] = dct_max_local_work_item_size[0];
+    LWS[1] = dct_max_local_work_item_size[1];
 
     clEnqueueNDRangeKernel(queue, inv_dct_kernel, 2, NULL, GWS, LWS, 0, NULL, NULL);
 
