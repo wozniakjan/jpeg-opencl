@@ -26,17 +26,53 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void measure_color_transform(const char *image) {
+void measure_color_transform(const char *image_name) {
+    // load image
+    pixmap *image = loadTGAdata(image_name);
+    if (image == NULL) return;
+    // create pixmaps for Y, Cb and Cr
+    pixmap *Y, *Cb, *Cr;
+    Y  = createPixmap(image->width, image->height, 1); // 1 byte per pixel
+    Cb = createPixmap(image->width, image->height, 1);
+    Cr = createPixmap(image->width, image->height, 1);
 
+    // compute YCbCr on cpu
     double t1 = get_time();
-    color_transform(image);
+    rgb_to_ycbcr(Y, Cb, Cr, image);
     double t2 = get_time();
-    color_transform_gpu(image);
+
+    // save results from cpu
+    saveGrayscalePixmap( Y,  "Y_cpu.tga");
+    saveGrayscalePixmap(Cb, "Cb_cpu.tga");
+    saveGrayscalePixmap(Cr, "Cr_cpu.tga");
+
+    // and back to rgb
+    pixmap *image_transf = ycbcr_to_rgb(Y, Cb, Cr);
+    saveTruecolorPixmap(image_transf, "transformed.tga");
+
+    // create buffer for results from gpu computing
+    int size = image->width * image->height;
+    unsigned char *dst = new unsigned char[size*3];
+
+    // compute YCbCr on gpu
     double t3 = get_time();
+    ycbcr_gpu(image, dst);
+    double t4 = get_time();
+
+    // copy results  to pixmaps to save it
+    memcpy ( Y->pixels,            dst, size);
+    memcpy (Cb->pixels,     dst + size, size);
+    memcpy (Cr->pixels, dst + size * 2, size);
+
+    //save results from gpu
+    saveGrayscalePixmap( Y,  "Y_gpu.tga");
+    saveGrayscalePixmap(Cb, "Cb_gpu.tga");
+    saveGrayscalePixmap(Cr, "Cr_gpu.tga");
+
 
     cout << "\n\nmethod             time [s]\n";
     cout << "color transform:     " << t2-t1 << "\n";
-    cout << "color transform GPU: " << t3-t2 << "\n";
+    cout << "color transform GPU: " << t4-t3 << "\n";
 
 }
 

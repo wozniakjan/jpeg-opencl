@@ -40,6 +40,6 @@ void dct8x8_gpu(float* src, float* dst, cl_mem* table);
 void inv_dct8x8_gpu(float* src, float* dst);
 double get_time();
 
-void color_transform_gpu (const char* image);
+void ycbcr_gpu(pixmap* data, unsigned char* dst);
 
 #endif
