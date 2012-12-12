@@ -13,15 +13,15 @@ void measure_huffman();
 void measure_color_transform(const char *image);
 void test_compress_decompress(const char *src, const char *dst);
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
+	
     load_table("../stuff/chrominace_table",chrominace_table);
     load_table("../stuff/luminace_table",luminace_table);
 
     initOpenCL();
 
-    test_compress_decompress("../stuff/sample3.tga", "../stuff/sample3_out.tga");
-    //measure_color_transform("../stuff/sample1.tga");
+    //test_compress_decompress("../stuff/sample3.tga", "../stuff/sample3_out.tga");
+    measure_color_transform("../stuff/sample2.tga");
     //measure_dct();
 
     /*unsigned char pic[100];
@@ -38,7 +38,9 @@ int main(int argc, char* argv[])
         if(i%10==0) std::cout << "\n";
         cout << (int)pic2[i];
     }*/
-
+	
+	cleanup();
+    	
     return 0;
 }
 
@@ -145,6 +147,11 @@ void measure_color_transform(const char *image_name) {
     cout << "color transform:     " << t2-t1 << "\n";
     cout << "color transform GPU: " << t4-t3 << "\n";
 
+	free(Y);
+	free(Cb);
+	free(Cr);
+	free(rgb);
+	
 }
 
 void measure_dct(){

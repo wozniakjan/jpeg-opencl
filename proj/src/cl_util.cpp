@@ -322,18 +322,18 @@ void to_ycbcr_gpu(unsigned char* data, unsigned int width, unsigned int height, 
 
 
     int l_gcd, gcd1, gcd2;
-    gcd1 = gcd(height, max_work_item_size[0]);
-    gcd2 = gcd(width,  max_work_item_size[1]);
+    gcd1 = gcd(height*3, max_work_item_size[0]);
+    gcd2 = gcd(width*3,  max_work_item_size[1]);
     //cout << "gcd1=" << gcd(height, max_work_item_size[0]) << endl;
     //cout << "gcd2=" << gcd(width,  max_work_item_size[1])  << endl;
     if (gcd1<gcd2) l_gcd = gcd1;
     else l_gcd = gcd2;
 
     size_t GWS[2], LWS[2];
-    GWS[0] = gcd1;
-    GWS[1] = gcd2;
-    LWS[0] = 1;
-    LWS[1] = 1;
+    GWS[0] = height*3;
+    GWS[1] = width*3;
+    LWS[0] = gcd1;
+    LWS[1] = gcd2;
 
     clEnqueueNDRangeKernel(queue, kernel_ycbcr, 2, NULL, GWS, LWS, 0, NULL, NULL);
 
@@ -352,19 +352,19 @@ void to_rgb_gpu(unsigned char* data, unsigned int width, unsigned int height, un
 
 
     int l_gcd, gcd1, gcd2;
-    gcd1 = gcd(height, max_work_item_size[0]);
-    gcd2 = gcd(width,  max_work_item_size[1]);
+    gcd1 = gcd(height*3, max_work_item_size[0]);
+    gcd2 = gcd(width*3,  max_work_item_size[1]);
     cout << "height=" << height << " and width=" << width << endl;
-    cout << "gcd1=" << gcd(height, max_work_item_size[0]) << endl;
-    cout << "gcd2=" << gcd(width,  max_work_item_size[1])  << endl;
+    cout << "gcd1=" << gcd(height*3, max_work_item_size[0]) << endl;
+    cout << "gcd2=" << gcd(width*3,  max_work_item_size[1])  << endl;
     if (gcd1<gcd2) l_gcd = gcd1;
     else l_gcd = gcd2;
 
     size_t GWS[2], LWS[2];
-    GWS[0] = gcd1;
-    GWS[1] = gcd2;
-    LWS[0] = 1;
-    LWS[1] = 1;
+    GWS[0] = height*3;
+    GWS[1] = width*3;
+    LWS[0] = gcd1;
+    LWS[1] = gcd2;
 
     clEnqueueNDRangeKernel(queue, kernel_rgb, 2, NULL, GWS, LWS, 0, NULL, NULL);
 
@@ -553,40 +553,47 @@ int cleanup()
 	/* Releases OpenCL resources (Context, Memory etc.) */
     cl_int status;
 
-    status = clReleaseKernel(edgeResultKernel);
-    CheckOpenCLError(status, "clReleaseKernel edgeResult.");
-    status = clReleaseKernel(edgeXKernel);
-    CheckOpenCLError(status, "clReleaseKernel edgeX.");
-    status = clReleaseKernel(edgeYKernel);
-    CheckOpenCLError(status, "clReleaseKernel edgeY.");
+    status = clReleaseKernel(dct_kernel);
+    checkClError(status, "clReleaseKernel dct_kernel.");
+    status = clReleaseKernel(inv_dct_kernel);
+    checkClError(status, "clReleaseKernel inv_dct_kernel.");
+    status = clReleaseKernel(kernel_ycbcr);
+    checkClError(status, "clReleaseKernel kernel_ycbcr.");
+    status = clReleaseKernel(kernel_rgb);
+    checkClError(status, "clReleaseKernel kernel_rgb.");
 
     status = clReleaseProgram(program);
-    CheckOpenCLError(status, "clReleaseProgram.");
+    checkClError(status, "clReleaseProgram.");
 
-    status = clReleaseMemObject(d_inputImageBuffer);
-    CheckOpenCLError(status, "clReleaseMemObject input");
+    status = clReleaseMemObject(block_src);
+    checkClError(status, "clReleaseMemObject block_src");
     
-    status = clReleaseMemObject(d_edgeXImageBuffer);
-    CheckOpenCLError(status, "clReleaseMemObject edgeX");
+    status = clReleaseMemObject(block_dst);
+    checkClError(status, "clReleaseMemObject block_dst");
 
-    status = clReleaseMemObject(d_edgeYImageBuffer);
-    CheckOpenCLError(status, "clReleaseMemObject edgeY");
+    status = clReleaseMemObject(cl_luminace_table);
+    checkClError(status, "clReleaseMemObject cl_luminace_table");
+    
+    status = clReleaseMemObject(cl_chrominace_table);
+    checkClError(status, "clReleaseMemObject cl_chrominace_table");
+    
+    status = clReleaseMemObject(src_rgb);
+    checkClError(status, "clReleaseMemObject src_rgb");
 	
-    status = clReleaseMemObject(d_outputImageBuffer);
-    CheckOpenCLError(status, "clReleaseMemObject output");
+    status = clReleaseMemObject(dst_ycbcr);
+    checkClError(status, "clReleaseMemObject dst_ycbcr");    
+    
+    status = clReleaseMemObject(src_ycbcr);
+    checkClError(status, "clReleaseMemObject src_ycbcr");
+	
+    status = clReleaseMemObject(dst_rgb);
+    checkClError(status, "clReleaseMemObject dst_rgb");
 
-    status = clReleaseCommandQueue(commandQueue);
-    CheckOpenCLError(status, "clReleaseCommandQueue.");
+    status = clReleaseCommandQueue(queue);
+    checkClError(status, "clReleaseCommandQueue.");
 
     status = clReleaseContext(context);
-    CheckOpenCLError(status, "clReleaseContext.");
-
-    /* release program resources (input memory etc.) */
-    if(h_inputImageData) 
-        free(h_inputImageData);
-        
-    if(h_outputImageData)
-        free(h_outputImageData);
+    checkClError(status, "clReleaseContext.");
 
     return 0;
 }
