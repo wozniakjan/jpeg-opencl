@@ -17,12 +17,12 @@ int main(int argc, char* argv[])
     load_table("../stuff/chrominace_table",chrominace_table);
     load_table("../stuff/luminace_table",luminace_table);
 
-    //initOpenCL();
+    initOpenCL();
 
-    //measure_color_transform("../stuff/sample1.tga");
-    //measure_dct();
+    measure_color_transform("../stuff/sample1.tga");
+    measure_dct();
 
-    unsigned char pic[100];
+    /*unsigned char pic[100];
     unsigned char pic2[100];
 
     for(int i = 0; i < 100; i++){
@@ -35,9 +35,8 @@ int main(int argc, char* argv[])
     for(int i = 0; i < 100; i++){
         if(i%10==0) std::cout << "\n";
         cout << (int)pic2[i];
-    }
+    }*/
 
-    //p->save_to_file("test.jpg");
     return 0;
 }
 
