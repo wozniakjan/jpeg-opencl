@@ -69,7 +69,6 @@ Pro kvantizaci je definováno několik vhodných tabulek\cite{t81}.
 \section{Implementace}
 Celý projekt je rozdělen do několika modulů
 \begin{itemize}
-\item \texttt{ahed} -- 
 \item \texttt{cl\_util} -- funkce potřebné pro práci s OpenCL, jednotlivé kernely jsou v souboru \texttt{jpeg.cl}.
 \item \texttt{color\_transform} -- 
 \item \texttt{dpcm\_rle} -- 
@@ -90,7 +89,7 @@ a třetím argumentem je kvantizační tabulka, neboť v rámci optimalizace jsm
 \section{Závěr}
 Výsledkem naší práce je srovnání rychlosti implementací na těchto strojích.
 \begin{itemize}
-\item Ubuntu -- 
+\item Ubuntu -- Core 2 Duo (T7500) 2.20GHz, NVIDIA GeForce 8600M GT
 \item Debian -- Core i5 (2500K) 3.3 GHz, NVIDIA GeForce 8800 GTX
 \item OS X -- Core i5 (I5-3317U) 1.7 GHz, HD Graphics 4000
 \end{itemize}
@@ -102,12 +101,12 @@ Hodnoty měření jsou uvedeny v milisekundách, porovnávány jsou paralelní v
 \begin{tabular}{|l|cc|cc|cc|}\hline%
 \multirow{2}{*}{Algoritmus}&\multicolumn{2}{|c|}{Ubuntu}&\multicolumn{2}{|c|}{Debian}&\multicolumn{2}{|c|}{OS X}\\
           &serial [ms]&paralel [ms]&serial [ms]&paralel [ms]&serial [ms]&paralel [ms]\\\hline%
-\texttt{RGB to YCbCr}&1&2&3&4&5&6\\
+\texttt{RGB to YCbCr}&447.89&1008.18&3&4&5&6\\
 \texttt{YCbCr to RGB}&1&2&3&4&5&6\\
 \texttt{Huffman}     &1&2&3&4&5&6\\
 \texttt{Inv\_Huffman} &1&2&3&4&5&6\\
-\texttt{DCT}         &1&2&0.320911&0.144005&0.410795&0.264168\\
-\texttt{Inv\_DCT}    &1&2&0.276089&0.113011&0.396967&0.203848\\
+\texttt{DCT}         &0.527859&1.49798&0.320911&0.144005&0.410795&0.264168\\
+\texttt{Inv\_DCT}    &0.527143&1.14584&0.276089&0.113011&0.396967&0.203848\\
 \hline
 \end{tabular}
 \renewcommand{\arraystretch}{1} %zvetseni mezer mezi radky v tabulce
