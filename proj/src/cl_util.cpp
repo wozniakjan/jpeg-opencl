@@ -1,5 +1,6 @@
 #include "cl_util.h"
 #include "jpeg_util.h"
+#include "color_transf.h"
 
 #define DEBUG
 
@@ -23,16 +24,14 @@ cl_int error;
 //buffers for dct
 cl_mem block_src;
 cl_mem block_dst;
-cl_mem cl_luminace_table; 
+cl_mem cl_luminace_table;
 cl_mem cl_chrominace_table;
 
-// kernels, rgb>YCbCr
-cl_kernel kernel_y;
-cl_kernel kernel_cb;
-cl_kernel kernel_cr;
+// kernel, rgb>YCbCr
+cl_kernel kernel_ycbcr;
 
 // buffers for color transormation
-cl_mem src_ycbcr;
+cl_mem src_rgb;
 cl_mem dst_ycbcr;
 
 //max number of local work items
@@ -43,7 +42,7 @@ cl_int getPlatformID()
 {
     cl_uint num_platforms;
     cl_platform_id *platform_ids;
-    
+
     // Get OpenCL platform count
     cl_int error = clGetPlatformIDs (0, NULL, &num_platforms);
     checkClError(error, "platformID count");
@@ -60,10 +59,10 @@ cl_int getPlatformID()
     // get platform info for each platform and trap the NVIDIA platform if found
     error = clGetPlatformIDs (num_platforms, platform_ids, NULL);
     checkClError(error, "platformIDs");
-    
+
     //assign platform id to global variable
     platform = platform_ids[0];
-    
+
     //clean resources
     free(platform_ids);
 
@@ -97,19 +96,19 @@ void set_max_dct_device_worksize(){
 int initOpenCL(){
     error = getPlatformID();
     checkClError(error, "getPlatformID");
-    
+
     // Device
     error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, dev_limit, devices, &dev_count);
     checkClError(error, "clGetDeviceIDs");
-    
+
     // Context
     cl_context_properties contextProperties[] = {
         CL_CONTEXT_PLATFORM, (cl_context_properties)platform, 0
     };
-    context = clCreateContext(contextProperties, dev_num, devices, 
+    context = clCreateContext(contextProperties, dev_num, devices,
                                          &contextCallback, NULL, &error);
     checkClError(error, "clCreateContext");
-   
+
     //sets max number of workgroups
     set_max_dct_device_worksize();
 
@@ -117,45 +116,43 @@ int initOpenCL(){
     queue = clCreateCommandQueue(context, devices[0], 0, &error);
     checkClError(error, "clCreateCommandQueue");
 
+/*  // musela jsem zakomentovat, jinak to pres tohle neproslo.
     // Load kernels
     error = loadKernelFromFile("../src/jpeg.cl", &dct_kernel, "dct8x8");
     checkClError(error, "loadKernelFromFile");
     error = loadKernelFromFile("../src/jpeg.cl", &inv_dct_kernel, "inv_dct8x8");
-    checkClError(error, "loadKernelFromFile");
-    error = loadKernelFromFile("../src/ycbcr.cl", &kernel_y, "y");
-    checkClError(error, "loadKernelFromFile");
-    error = loadKernelFromFile("../src/ycbcr.cl", &kernel_cb, "cb");
-    checkClError(error, "loadKernelFromFile");
-    error = loadKernelFromFile("../src/ycbcr.cl", &kernel_cr, "cr");
+    checkClError(error, "loadKernelFromFile");*/
+
+    error = loadKernelFromFile("../src/ycbcr.cl", &kernel_ycbcr, "ycbcr");
     checkClError(error, "loadKernelFromFile");
 
     // Alloc buffers with const size & copy data to quantization table buffers
     block_src = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float)*64, NULL, &error);
     checkClError(error, "clCreateBuffer");
     block_dst = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float)*64, NULL, &error);
-    checkClError(error, "clCreateBuffer"); 
+    checkClError(error, "clCreateBuffer");
 
-    cl_luminace_table = clCreateBuffer(context, CL_MEM_READ_ONLY, 
+    cl_luminace_table = clCreateBuffer(context, CL_MEM_READ_ONLY,
                                 sizeof(cl_int)*64, NULL, &error);
     checkClError(error, "clCreateBuffer");
-    cl_chrominace_table = clCreateBuffer(context, CL_MEM_READ_ONLY, 
+    cl_chrominace_table = clCreateBuffer(context, CL_MEM_READ_ONLY,
                                 sizeof(cl_int)*64, NULL, &error);
     checkClError(error, "clCreateBuffer");
-    error = clEnqueueWriteBuffer(queue, 
-            cl_luminace_table, //memory on gpu 
+    error = clEnqueueWriteBuffer(queue,
+            cl_luminace_table, //memory on gpu
             CL_TRUE,   //blocking write
             0,         //offset
-            sizeof(cl_int)*64, //size in bytes of copied data 
+            sizeof(cl_int)*64, //size in bytes of copied data
             luminace_table,       //memory data
             0,         //wait list
             NULL,      //wait list
             NULL);     //wait list
     checkClError(error,"clEnqueueWriteBuffer");
-    error = clEnqueueWriteBuffer(queue, 
-            cl_chrominace_table, //memory on gpu 
+    error = clEnqueueWriteBuffer(queue,
+            cl_chrominace_table, //memory on gpu
             CL_TRUE,   //blocking write
             0,         //offset
-            sizeof(cl_int)*64, //size in bytes of copied data 
+            sizeof(cl_int)*64, //size in bytes of copied data
             chrominace_table,       //memory data
             0,         //wait list
             NULL,      //wait list
@@ -175,6 +172,13 @@ cl_int loadKernelFromFile(const char* fileName, cl_kernel* kernel, char* kernel_
     checkClError(error, "clCreatePogramWithSource");
 
     error = clBuildProgram(program, dev_count, devices, NULL, NULL, NULL);
+    /*
+    size_t len;
+    char log[32048];
+    memset(log, 0, sizeof(log));
+    clGetProgramBuildInfo(program, devices[0], CL_PROGRAM_BUILD_LOG, sizeof(log), log, &len);
+    cout<<"--- Build log ---\n "<<log<<endl;
+    */
     checkClError(error, /*"clBuildProgram"*/kernel_name);
 
     (*kernel) = clCreateKernel(program, kernel_name, &error);
@@ -186,11 +190,11 @@ cl_int loadKernelFromFile(const char* fileName, cl_kernel* kernel, char* kernel_
 
 void dct8x8_gpu(float* src, float* dst, cl_mem* table){
     // Copy data from memory to gpu
-    error = clEnqueueWriteBuffer(queue, 
-            block_src, //memory on gpu 
+    error = clEnqueueWriteBuffer(queue,
+            block_src, //memory on gpu
             CL_TRUE,   //blocking write
             0,         //offset
-            sizeof(cl_float)*64, //size in bytes of copied data 
+            sizeof(cl_float)*64, //size in bytes of copied data
             src,       //memory data
             0,         //wait list
             NULL,      //wait list
@@ -216,11 +220,11 @@ void dct8x8_gpu(float* src, float* dst, cl_mem* table){
 
 void inv_dct8x8_gpu(float* src, float* dst){
     // Copy data from memory to gpu
-    error = clEnqueueWriteBuffer(queue, 
-            block_src, //memory on gpu 
+    error = clEnqueueWriteBuffer(queue,
+            block_src, //memory on gpu
             CL_TRUE,   //blocking write
             0,         //offset
-            sizeof(cl_float)*64, //size in bytes of copied data 
+            sizeof(cl_float)*64, //size in bytes of copied data
             src,       //memory data
             0,         //wait list
             NULL,      //wait list
@@ -246,142 +250,65 @@ void inv_dct8x8_gpu(float* src, float* dst){
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
-/*
 
-//tahle funkce se zavola jen jednou, kdyz uz znas obrazek a jeho velikost   
-void load_picture_data_to_gpu(array* picture_data, int size){
-    alokace jedineho src bufferu
-    alokace jedineho dst bufferu
-
-    nahrat data do src_bufferu
-}
-
-//data jsou raw data obrazku, dst by melo obsahovat vsechny slozky, proste celek co se
-//preda dalsimu bloku na zpracovani, treba trirozmerne pole nebo jednorozmerne a kazda
-//slozka bude posunuta o offset
-void ycbcr_gpu(pixmap* data, ycbcr_picture* dst){
-    load_picture_data_to_gpu
-    
-    nastavit argumenty, rekl bych ze stejne pro vsechny kernely
-    nastavig GWS a LWS, rekl bych ze stejne pro vsechny kernely
-
-    zavolat kernel_y
-    nahrat data z gpu do dst
-    zavolat kernel_cb
-    nahrat data z gpu do dst + offset
-    zavolat kernel_cr
-    nahrat data z gpu do dst + 2offsety
-    
-    finish
-}
-
-    
-
-cl_int loadKernelFromFile_ycbcr(const char* fileName, const char* kernel_name){
-    ifstream src_file(fileName);
-    if(!src_file.is_open()) return EXIT_FAILURE;
-
-    string src_prog(istreambuf_iterator<char>(src_file), (istreambuf_iterator<char>()));
-    const char *src = src_prog.c_str();
-    size_t length = src_prog.length();
-
-    program = clCreateProgramWithSource(context, 1, &src, &length, &error);
-    checkClError(error, "clCreatePogramWithSource");
-
-    error = clBuildProgram(program, dev_count, devices, NULL, NULL, NULL);
-    checkClError(error, "clBuildProgram");
-
-    kernel_y = clCreateKernel(program, kernel_name, &error);
-    checkClError(error, "clCreateKernel");
-
-    return CL_SUCCESS;
-}
-
-int initOpenCL_ycbcr(pixmap* data, cl_mem src_name, cl_mem dst_name, const char* kernel_name) {
-    error = getPlatformID();
-    checkClError(error, "getPlatformID");
-    
-    // Device
-    error = clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, dev_limit, devices, &dev_count);
-    checkClError(error, "clGetDeviceIDs");
-    
-    // Context
-    cl_context_properties contextProperties[] = {
-        CL_CONTEXT_PLATFORM, (cl_context_properties)platform, 0
-    };
-    context = clCreateContext(contextProperties, dev_num, devices, 
-                                         &contextCallback, NULL, &error);
-    checkClError(error, "clCreateContext");
-    
-    // Command-queue
-    queue = clCreateCommandQueue(context, devices[0], 0, &error);
-    checkClError(error, "clCreateCommandQueue");
-
-    // Load kernel
-    error = loadKernelFromFile_ycbcr("../src/ycbcr.cl", kernel_name);
-    checkClError(error, "loadKernelFromFile");
-
-    // Alloc buffers & copy data to src buffer
-    src_name = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_uchar)*data->width*data->height, NULL, &error);
+/* Alocates buffers and loads the image into the gpu memory */
+void load_picture_data_to_gpu(pixmap* data, int size){
+    src_rgb = clCreateBuffer(context, CL_MEM_READ_ONLY,
+            sizeof(unsigned char) * size, NULL, &error);
     checkClError(error, "clCreateBuffer");
-    dst_name = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_uchar)*data->width*data->height, NULL, &error);
-    checkClError(error, "clCreateBuffer"); 
-}
-
-
-int initOpenCL_color_transform(pixmap* data){
-  initOpenCL_ycbcr(data, src_y, dst_y, "y");
-  initOpenCL_ycbcr(data, src_cb, dst_cb, "cb");
-  initOpenCL_ycbcr(data, src_cr, dst_cr, "cr");
-}
-
-void ycbcr_gpu(pixmap* data, pixmap* dst, cl_mem src_name, cl_mem dst_name, cl_kernel kernel_name){
-    src_name = clCreateBuffer(context, CL_MEM_READ_ONLY, 
-            sizeof(cl_uchar)*data->width*data->height, NULL, &error);
+    dst_ycbcr = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
+            sizeof(unsigned char) * size, NULL, &error);
     checkClError(error, "clCreateBuffer");
-    dst_name = clCreateBuffer(context, CL_MEM_WRITE_ONLY, 
-            sizeof(cl_uchar)*data->width*data->height, NULL, &error);
-    checkClError(error, "clCreateBuffer"); 
-    // Copy data from memory to gpu
-    error = clEnqueueWriteBuffer(queue, 
-            src_name, //memory on gpu 
+
+    error = clEnqueueWriteBuffer(queue,
+            src_rgb, //memory on gpu
             CL_TRUE,   //blocking write
             0,         //offset
-            sizeof(cl_uchar)*data->width*data->height, //size in bytes of copied data 
+            sizeof(unsigned char) * size, //size in bytes of copied data
             data->pixels,      //memory data
             0,         //wait list
             NULL,      //wait list
             NULL);     //wait list
     checkClError(error,"clEnqueueWriteBuffer");
+}
+
+/* Greatest common divider */
+int gcd (int num1,int num2){
+    int pom;
+
+    if (num1 < num2) {
+        pom = num1;
+        num1 = num2;
+        num2 = pom;
+    }
+
+    if ((num1%num2) == 0)
+        return (num2);
+    else
+        return gcd(num2,(num1%num2));
+}
+
+
+void ycbcr_gpu(pixmap* data, unsigned char* dst){
+    load_picture_data_to_gpu(data, data->width * data->height * 3);
+
+    clSetKernelArg(kernel_ycbcr, 0, sizeof(cl_mem), (void *)&src_rgb);
+    clSetKernelArg(kernel_ycbcr, 1, sizeof(cl_uint), &(data->width));
+    clSetKernelArg(kernel_ycbcr, 2, sizeof(cl_uint), &(data->height));
+    clSetKernelArg(kernel_ycbcr, 3, sizeof(cl_mem), (void *)&dst_ycbcr);
 
     size_t GWS[2], LWS[2];
     GWS[0] = data->height;
     GWS[1] = data->width;
-    LWS[0] = data->height;
-    LWS[1] = data->width;
-    
-    clSetKernelArg(kernel_name, 0, sizeof(cl_mem), (void *)&src_name);
-    clSetKernelArg(kernel_name, 1, sizeof(cl_mem), (void *)data->width);
-    clSetKernelArg(kernel_name, 2, sizeof(cl_mem), (void *)&dst_name);
+    LWS[0] = gcd(data->height, max_work_item_size[0]);
+    LWS[1] = gcd(data->width,  max_work_item_size[1]);
 
-    clEnqueueNDRangeKernel(queue, kernel_name, 2, NULL, GWS, LWS, 0, NULL, NULL);
+    clEnqueueNDRangeKernel(queue, kernel_ycbcr, 2, NULL, GWS, LWS, 0, NULL, NULL);
 
-    clEnqueueReadBuffer(queue, dst_name, CL_TRUE, 0, sizeof(cl_uchar)*data->width*data->height, dst->pixels, 0, NULL, NULL);
+    clEnqueueReadBuffer(queue, dst_ycbcr, CL_TRUE, 0, sizeof(unsigned char) * data->width * data->height * 3, dst, 0, NULL, NULL);
 
     clFinish(queue);
 }
-
-
-void color_transform_gpu(pixmap* data, pixmap* p_y, pixmap* p_cb, pixmap* p_cr) {
-  ycbcr_gpu(data, p_y, src_y, dst_y, kernel_y);
-  ycbcr_gpu(data, p_cb, src_cb, dst_cb, kernel_cb);
-  ycbcr_gpu(data, p_cr, src_cr, dst_cr, kernel_cr);
-
-}
-*/
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
 
 
 /**
@@ -498,7 +425,7 @@ inline void checkClError(cl_int err, char* debug){
 #endif
 }
 
-void CL_CALLBACK contextCallback(const char *err_info, 
+void CL_CALLBACK contextCallback(const char *err_info,
                                  const void *private_intfo,
                                  size_t cb,
                                  void *user_data){
@@ -509,23 +436,23 @@ void CL_CALLBACK contextCallback(const char *err_info,
 
 double get_time(void)
 {
-#if _WIN32  		
+#if _WIN32
     static int initialized = 0;
     static LARGE_INTEGER frequency;
     LARGE_INTEGER value;
 
     if (!initialized) {
         initialized = 1;
-        if (QueryPerformanceFrequency(&frequency) == 0)         {                   
+        if (QueryPerformanceFrequency(&frequency) == 0)         {
             exit(-1);
         }
     }
 
     QueryPerformanceCounter(&value);
-    return (double)value.QuadPart / (double)frequency.QuadPart; 
+    return (double)value.QuadPart / (double)frequency.QuadPart;
 #else
     struct timeval tv;
-    if (gettimeofday(&tv, NULL) == -1) {      
+    if (gettimeofday(&tv, NULL) == -1) {
         exit(-2);
     }
     return (double)tv.tv_sec + (double)tv.tv_usec/1000000.;

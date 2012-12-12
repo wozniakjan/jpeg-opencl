@@ -17,7 +17,7 @@ void zig_zag(int* table, int* ziged, int rows, int cols);
 void dct8x8(float* block, float* dct_block, int* table);
 void inv_dct8x8(float* dct_block, float* block);
 
-class Marker { 
+class Marker {
     protected:
         unsigned char *data;     // Head[2] + payload[n]
         int data_len;   // Length of Marker Head & payload
@@ -36,8 +36,8 @@ class SOI : public Marker {
         SOI();
 };
 
-// Application Specific 
-class APP0 : public Marker { 
+// Application Specific
+class APP0 : public Marker {
     public:
         APP0();
 };
@@ -96,7 +96,7 @@ class JpegPicture {
     unsigned char* src;
     int rows;
     int cols;
-    
+
     //std::vector<float*> *blocks;
 
     float** blocks;
@@ -109,21 +109,5 @@ class JpegPicture {
         void save_to_file(std::string file_name);
         float* get_block(int i);
 };
-
-
-// color transform
-
-typedef struct {
-  unsigned int   width;
-  unsigned int   height;
-  unsigned char *pixels; // 0-255
-} pixmap;
-
-pixmap * loadTGAdata (const char * imgname);
-void saveGrayscalePixmap(pixmap *data, const char *imgname);
-
-// melo by byt v cl_util.h, ale nemuzu to tam nacpat
-int initOpenCL_color_transform(pixmap* data);
-void color_transform_gpu(pixmap* data, pixmap* p_y, pixmap* p_cb, pixmap* p_cr);
 
 #endif

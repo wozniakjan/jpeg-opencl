@@ -22,8 +22,9 @@
 #include <fstream>
 #include <string>
 
+#include "color_transf.h"
 
-extern cl_mem cl_luminace_table; 
+extern cl_mem cl_luminace_table;
 extern cl_mem cl_chrominace_table;
 
 int initOpenCL();
@@ -31,11 +32,14 @@ double getTime();
 cl_int loadKernelFromFile(const char* fileName, cl_kernel* kernel, char* kernel_name);
 void checkClError(cl_int err, char* debug);
 const char *CLErrorString(cl_int _err);
-void CL_CALLBACK contextCallback(const char *err_info, 
+void CL_CALLBACK contextCallback(const char *err_info,
                                  const void *private_intfo,
                                  size_t cb,
                                  void *user_data);
 void dct8x8_gpu(float* src, float* dst, cl_mem* table);
 void inv_dct8x8_gpu(float* src, float* dst);
 double get_time();
-#endif 
+
+void ycbcr_gpu(pixmap* data, unsigned char* dst);
+
+#endif
