@@ -32,15 +32,20 @@ a měřit zvlášť.
 Dále jsou v textu popsány vybrané algoritmy a porovnání paralelních variant na GPU se seriovými, které vykonává CPU.
 
 \section{Teoretický rozbor} %asi by bylo vhodne lepe pojmenovat tuto kapitolu
-Schéma pipeline pro JPEG kompresi na obrazku \ref{pipeline} obsahuje barevně odlišené bloky, což jsou algoritmy,
+Schéma pipeline pro sekvenční režim JPEG komprese na obrázku \ref{pipeline} obsahuje barevně odlišené bloky, což jsou algoritmy,
 které jsme se rozhodli paralelizovat. Mezi jednotlivými bloky jsou uvedeny i datové typy, jaké jsou mezi výstupem
 jednoho bloku a vstupem druhého bloku očekávány.
 
-\textit{Převod barevného modelu}
+\textit{Převod barevného modelu} je prvním krokem zpracování rastrových dat. Provádíme bezeztrátovou transformaci z barvového prostoru RGB do $YC_bC_r$. Převod jednotlivých složek se provádí podle následujících vzorců:
+\begin{eqnarray}
+  Y &=& 0,299  R + 0,587  G + 0,114  B\\
+  C_b &=& - 0,1687 R - 0,3313 G + 0,5    B + 128\\
+  C_r &=&    0,5    R - 0,4187 G - 0,0813 B + 128 
+\end{eqnarray}
 
-\textit{Diskrétní kosínova transformace} slouží k převodu obrazu z prostorové domény do frekvenční domény. V normě JPEG
+\textit{Diskrétní kosinová transformace} slouží k převodu obrazu z prostorové domény do frekvenční domény. V normě JPEG
 je definováno 6 variant, z nichž nejčastěji používaná Baseline DCT, kterou jsme také v rámci projektu implementovali\cite{mul}. 
-Po aplikaci kosínové transformace dostaneme dvě složky koeficientů -- stejnosměrnou (AC) a střídavou (DC). Tyto složky
+Po aplikaci kosinové transformace dostaneme dvě složky koeficientů -- stejnosměrnou (AC) a střídavou (DC). Tyto složky
 se dále v algoritmu komprimují zvlášť. Vzorce \ref{dct1}, \ref{dct2} a \ref{dct3} jsou matematickým zápisem DCT,
 kde platí, že \textit{N} je pro JPEG blok rovno 8.
 \begin{eqnarray}
@@ -54,10 +59,10 @@ c[k,j] &=& \sum^{N-1}_{n=0}{\sum^{N-1}_{m=0}{f[n,m]g_{k,j}[n,m]}}\label{dct3}
 
 
 \textit{Kvantizace} je implementována pomocí dvou tabulek, zvlášť pro jasovou složku a chrominescenční složky. Hodnota v 
-bloku je nejprve vydělena přislušnou hodnotou v tabulce, zaokrouhlena a poté vynásobena stejnou hodnotou z tabulky.
+bloku je nejprve vydělena příslušnou hodnotou v tabulce, zaokrouhlena a poté vynásobena stejnou hodnotou z tabulky.
 Pro kvantizaci je definováno několik vhodných tabulek\cite{t81}.
 
-\textit{Huffmanovo kódování}
+\textit{Huffmanovo kódování} kvantovaných složek probíhá pro stejnosměrné a střídavé koeficienty zvlášť. Před samotným kódováním se tyto složky upraví, aby došlo k redukci výsledného počtu bitů. Nad blokem DC koeficientů spočítáme diferenci, tj. odečteme hodnotu předchozího bloku. Jelikož DC složka odpovídá průměrnému jasu či barvě pixelů v daném bloku a obrázky většinou obsahují souvislé barevné plochy, vniknou takto nízké hodnoty\cite{root}. U AC složek se provádí RLC kódování. Mnoho z nich má totiž nulovou hodnotu, je proto výhodné zapsat sekvence nul efektivně. Výstupem jsou bajty ve tvaru "RRRRSSSS", kde RRRR je počet předcházejicích nulových koeficientů a SSSS značí kategorii hodnoty koeficientu.
 
 \begin{figure}[H]
   \centering
@@ -70,14 +75,14 @@ Pro kvantizaci je definováno několik vhodných tabulek\cite{t81}.
 Celý projekt je rozdělen do několika modulů
 \begin{itemize}
 \item \texttt{cl\_util} -- funkce potřebné pro práci s OpenCL, jednotlivé kernely jsou v souboru \texttt{jpeg.cl}.
-\item \texttt{color\_transform} -- 
-\item \texttt{dpcm\_rle} -- 
-\item \texttt{huffman} -- 
+\item \texttt{color\_transform} -- funkce pro načtení/uložení obrázku TGA, transformace barevného prostoru a podvzorkování barevných složek 
+\item \texttt{dpcm\_rle} -- výpočet diference pro vstupní blok DC koeficientů a rle kódování AC koeficientů dle normy JPEG
+\item \texttt{huffman} -- Huffmanovo kódování a kódovací tabulky
 \item \texttt{jpeg\_util} -- tvorba a čtení JPEG markerů a další pomocné funkce pro JPEG, které nemají samostaný
 modul (zig-zag, kvantizace, DCT ...).
 \item \texttt{main} -- funkce \texttt{main} a časová měření algoritmů.
 \end{itemize}
-\textit{Diskrétní kosínova transformace} je implementována pomocí funkcí
+\textit{Diskrétní kosinová transformace} je implementována pomocí funkcí
 
 \texttt{void dct8x8(float* block, float* dct, int* table)} -- sériově
 
@@ -129,9 +134,11 @@ Hodnoty měření jsou uvedeny v milisekundách, porovnávány jsou paralelní v
 % Vzor: \bi{label}{Název}{Poznámky.}{http://www.adresa.cz/}%
 \bi{t81}{Recommendation T.81}{\citdatum[2012-12-10]}
     {http://www.w3.org/Graphics/JPEG/itu-t81.pdf}
-\bibitem{mul}{D. Bařina. \textit{Diskrétní kosínová transformace -- prezentace ke cvičení}. \citdatum[2008-12-08].\\
+\bibitem{mul}{D. Bařina. \textit{Diskrétní kosinová transformace -- prezentace ke cvičení}. \citdatum[2008-12-08].\\
     $<$\url{http://www.fit.vutbr.cz/study/course-l.php.cs?id=8766}$>$}
 \bi{wiki}{Wikipedia, the free encyclopedia}{\citdatum[2012-12-10]}
     {http://en.wikipedia.org/}
+\bibitem{root}{Pavel Tišnovský. \textit{Ztrátová komprese obrazových dat pomocí JPEG}. ROOT.CZ, 2006, 14.12.}{\citdatum[2012-12-10]}
+    $<$\url{http://www.root.cz/clanky/ztratova-komprese-obrazovych-dat-pomoci-jpeg/}    
 \end{thebibliography}}
 \end{document}
