@@ -119,17 +119,21 @@ modul (zig-zag, kvantizace, DCT ...).
 \end{itemize}
 \textit{Diskrétní kosinová transformace} je implementována pomocí funkcí
 
-\texttt{void dct8x8(float* block, float* dct, int* table)} -- sériově
+\vspace{0.5em}
+\hspace{-1.5em}\texttt{void dct8x8(float* block, float* dct, int* table)} -- sériově\\
+\texttt{void dct8x8\_gpu(float* block, float* dst, cl\_mem* table)} -- paralelně
+\vspace{0.5em}
 
-\texttt{void dct8x8\_gpu(float* block, float* dst, cl\_mem* table)} -- paralelně\\
 kde prvním argumentem jsou data bloku vstupujícího do DCT, druhým argumentem pole pro výstupní AC a DC koeficienty DCT
 a třetím argumentem je kvantizační tabulka, neboť v rámci optimalizace jsme sjednotili kvantizaci s DCT.
 
 \textit{Převod barevného modelu} je implementován pomocí dvou funkcí:
 
-\texttt{void rgb\_to\_ycbcr(pixmap *Y, pixmap *Cb, pixmap *Cr, pixmap *data)} -- sériově
+\vspace{0.5em}
+\hspace{-1.5em}\texttt{void rgb\_to\_ycbcr(pixmap *Y, pixmap *Cb, pixmap *Cr, pixmap *d)} -- sériově\\
+\texttt{void ycbcr\_gpu(pixmap* data, unsigned char* dst)} -- paralelně
+\vspace{0.5em}
 
-\texttt{void ycbcr\_gpu(pixmap* data, unsigned char* dst)} -- paralelně\\
 \texttt{pixmap} je struktura obashující rozměry a rastrová data. Do sériového výpočtu vstupují tři pixmapy (Y, $C_b$, $C_r$) pro uložení výsledků a pixmapa s načteným obrázkem. V paralelní implementaci vstupuje pixmapa s obrázkem a druhým argumentem je pole, do kterého se ukládají všechny tři složky. 
 
 \section{Dosažené výsledky}
@@ -140,6 +144,7 @@ Výsledkem naší práce je srovnání rychlosti implementací na těchto stroj�
 \item OS X -- Core i5 (I5-3317U) 1.7 GHz, HD Graphics 4000
 \end{itemize}
 Hodnoty měření jsou uvedeny v milisekundách, porovnávány jsou paralelní verze a sériové verze algoritmů.
+Konverze barevných prostorů byla testována na obrázku 4752x3168 pixelů, DCT je měřena pro jediný blok.
 
 \begin{table}[H]
 \begin{center}
