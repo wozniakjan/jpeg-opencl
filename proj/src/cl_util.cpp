@@ -27,12 +27,15 @@ cl_mem block_dst;
 cl_mem cl_luminace_table;
 cl_mem cl_chrominace_table;
 
-// kernel, rgb>YCbCr
+// kernel
 cl_kernel kernel_ycbcr;
+cl_kernel kernel_rgb;
 
 // buffers for color transormation
 cl_mem src_rgb;
 cl_mem dst_ycbcr;
+cl_mem src_ycbcr;
+cl_mem dst_rgb;
 
 //max number of local work items
 size_t max_work_item_size[3];
@@ -122,8 +125,9 @@ int initOpenCL(){
     error = loadKernelFromFile("../src/jpeg.cl", &inv_dct_kernel, "inv_dct8x8");
     checkClError(error, "loadKernelFromFile");
 
-
-    error = loadKernelFromFile("../src/ycbcr.cl", &kernel_ycbcr, "ycbcr");
+    error = loadKernelFromFile("../src/ycbcr.cl", &kernel_ycbcr, "to_ycbcr");
+    checkClError(error, "loadKernelFromFile");
+    error = loadKernelFromFile("../src/ycbcr.cl", &kernel_rgb, "to_rgb");
     checkClError(error, "loadKernelFromFile");
 
     // Alloc buffers with const size & copy data to quantization table buffers
@@ -251,7 +255,7 @@ void inv_dct8x8_gpu(float* src, float* dst){
 // ----------------------------------------------------------------------------
 
 /* Alocates buffers and loads the image into the gpu memory */
-void load_picture_data_to_gpu(pixmap* data, int size){
+void load_picture_data_to_gpu(unsigned char* data, unsigned int size){
     src_rgb = clCreateBuffer(context, CL_MEM_READ_ONLY,
             sizeof(unsigned char) * size, NULL, &error);
     checkClError(error, "clCreateBuffer");
@@ -264,7 +268,27 @@ void load_picture_data_to_gpu(pixmap* data, int size){
             CL_TRUE,   //blocking write
             0,         //offset
             sizeof(unsigned char) * size, //size in bytes of copied data
-            data->pixels,      //memory data
+            data,      //memory data
+            0,         //wait list
+            NULL,      //wait list
+            NULL);     //wait list
+    checkClError(error,"clEnqueueWriteBuffer");
+}
+
+void load_ycbcr_data_to_gpu(unsigned char* data, unsigned int size){
+    src_ycbcr = clCreateBuffer(context, CL_MEM_READ_ONLY,
+            sizeof(unsigned char) * size, NULL, &error);
+    checkClError(error, "clCreateBuffer");
+    dst_rgb = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
+            sizeof(unsigned char) * size, NULL, &error);
+    checkClError(error, "clCreateBuffer");
+
+    error = clEnqueueWriteBuffer(queue,
+            src_ycbcr, //memory on gpu
+            CL_TRUE,   //blocking write
+            0,         //offset
+            sizeof(unsigned char) * size, //size in bytes of copied data
+            data,      //memory data
             0,         //wait list
             NULL,      //wait list
             NULL);     //wait list
@@ -288,43 +312,75 @@ int gcd (int num1,int num2){
 }
 
 
-void ycbcr_gpu(pixmap* data, unsigned char* dst){
-    load_picture_data_to_gpu(data, data->width * data->height * 3);
+void to_ycbcr_gpu(unsigned char* data, unsigned int width, unsigned int height, unsigned char* dst){
+    load_picture_data_to_gpu(data, width * height * 3);
 
     clSetKernelArg(kernel_ycbcr, 0, sizeof(cl_mem), (void *)&src_rgb);
-    clSetKernelArg(kernel_ycbcr, 1, sizeof(cl_uint), &(data->width));
-    clSetKernelArg(kernel_ycbcr, 2, sizeof(cl_uint), &(data->height));
+    clSetKernelArg(kernel_ycbcr, 1, sizeof(cl_uint), &(width));
+    clSetKernelArg(kernel_ycbcr, 2, sizeof(cl_uint), &(height));
     clSetKernelArg(kernel_ycbcr, 3, sizeof(cl_mem), (void *)&dst_ycbcr);
 
 
     int l_gcd, gcd1, gcd2;
-    gcd1 = gcd(data->height, max_work_item_size[0]);
-    gcd2 = gcd(data->width,  max_work_item_size[1]);
-    //cout << "gcd1=" << gcd(data->height, max_work_item_size[0]) << endl;
-    //cout << "gcd2=" << gcd(data->width,  max_work_item_size[1])  << endl;
+    gcd1 = gcd(height, max_work_item_size[0]);
+    gcd2 = gcd(width,  max_work_item_size[1]);
+    //cout << "gcd1=" << gcd(height, max_work_item_size[0]) << endl;
+    //cout << "gcd2=" << gcd(width,  max_work_item_size[1])  << endl;
     if (gcd1<gcd2) l_gcd = gcd1;
     else l_gcd = gcd2;
 
     size_t GWS[2], LWS[2];
-    GWS[0] = data->height;
-    GWS[1] = data->width;
-    LWS[0] = l_gcd;
-    LWS[1] = l_gcd;
+    GWS[0] = gcd1;
+    GWS[1] = gcd2;
+    LWS[0] = 1;
+    LWS[1] = 1;
 
     clEnqueueNDRangeKernel(queue, kernel_ycbcr, 2, NULL, GWS, LWS, 0, NULL, NULL);
 
-    clEnqueueReadBuffer(queue, dst_ycbcr, CL_TRUE, 0, sizeof(unsigned char) * data->width * data->height * 3, dst, 0, NULL, NULL);
+    clEnqueueReadBuffer(queue, dst_ycbcr, CL_TRUE, 0, sizeof(unsigned char) * width * height * 3, dst, 0, NULL, NULL);
 
     clFinish(queue);
 }
 
+void to_rgb_gpu(unsigned char* data, unsigned int width, unsigned int height, unsigned char* dst){
+    load_ycbcr_data_to_gpu(data, width * height * 3);
+
+    clSetKernelArg(kernel_rgb, 0, sizeof(cl_mem), (void *)&src_ycbcr);
+    clSetKernelArg(kernel_rgb, 1, sizeof(cl_uint), &(width));
+    clSetKernelArg(kernel_rgb, 2, sizeof(cl_uint), &(height));
+    clSetKernelArg(kernel_rgb, 3, sizeof(cl_mem), (void *)&dst_rgb);
+
+
+    int l_gcd, gcd1, gcd2;
+    gcd1 = gcd(height, max_work_item_size[0]);
+    gcd2 = gcd(width,  max_work_item_size[1]);
+    cout << "height=" << height << " and width=" << width << endl;
+    cout << "gcd1=" << gcd(height, max_work_item_size[0]) << endl;
+    cout << "gcd2=" << gcd(width,  max_work_item_size[1])  << endl;
+    if (gcd1<gcd2) l_gcd = gcd1;
+    else l_gcd = gcd2;
+
+    size_t GWS[2], LWS[2];
+    GWS[0] = gcd1;
+    GWS[1] = gcd2;
+    LWS[0] = 1;
+    LWS[1] = 1;
+
+    clEnqueueNDRangeKernel(queue, kernel_rgb, 2, NULL, GWS, LWS, 0, NULL, NULL);
+
+    clEnqueueReadBuffer(queue, dst_rgb, CL_TRUE, 0, sizeof(unsigned char) * width * height * 3, dst, 0, NULL, NULL);
+
+    clFinish(queue);
+}
+
+/*
 void color_transform_gpu (const char* image) {
     pixmap *data = loadTGAdata(image);
     if (data == NULL) return;
     int size = data->width * data->height;
 
     unsigned char *dst = new unsigned char[size*3];
-    ycbcr_gpu(data, dst);
+    to_ycbcr_gpu(data->pixels, data->width, data->height, dst);
 
     pixmap *Y, *Cb, *Cr;
 
@@ -342,6 +398,7 @@ void color_transform_gpu (const char* image) {
     saveGrayscalePixmap(Cr, "Cr_gpu.tga");
 
 }
+*/
 
 /**
  * Vrati retezec pro opencl error kod
@@ -489,4 +546,47 @@ double get_time(void)
     }
     return (double)tv.tv_sec + (double)tv.tv_usec/1000000.;
 #endif
+}
+
+int cleanup()
+{
+	/* Releases OpenCL resources (Context, Memory etc.) */
+    cl_int status;
+
+    status = clReleaseKernel(edgeResultKernel);
+    CheckOpenCLError(status, "clReleaseKernel edgeResult.");
+    status = clReleaseKernel(edgeXKernel);
+    CheckOpenCLError(status, "clReleaseKernel edgeX.");
+    status = clReleaseKernel(edgeYKernel);
+    CheckOpenCLError(status, "clReleaseKernel edgeY.");
+
+    status = clReleaseProgram(program);
+    CheckOpenCLError(status, "clReleaseProgram.");
+
+    status = clReleaseMemObject(d_inputImageBuffer);
+    CheckOpenCLError(status, "clReleaseMemObject input");
+    
+    status = clReleaseMemObject(d_edgeXImageBuffer);
+    CheckOpenCLError(status, "clReleaseMemObject edgeX");
+
+    status = clReleaseMemObject(d_edgeYImageBuffer);
+    CheckOpenCLError(status, "clReleaseMemObject edgeY");
+	
+    status = clReleaseMemObject(d_outputImageBuffer);
+    CheckOpenCLError(status, "clReleaseMemObject output");
+
+    status = clReleaseCommandQueue(commandQueue);
+    CheckOpenCLError(status, "clReleaseCommandQueue.");
+
+    status = clReleaseContext(context);
+    CheckOpenCLError(status, "clReleaseContext.");
+
+    /* release program resources (input memory etc.) */
+    if(h_inputImageData) 
+        free(h_inputImageData);
+        
+    if(h_outputImageData)
+        free(h_outputImageData);
+
+    return 0;
 }

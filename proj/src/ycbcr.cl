@@ -1,5 +1,5 @@
 
-__kernel void ycbcr(__global unsigned char* pixels, uint width, uint height, __global unsigned char* group_result){
+__kernel void to_ycbcr(__global unsigned char* pixels, uint width, uint height, __global unsigned char* group_result){
   unsigned char y, cb, cr;
   size_t index_j = get_global_id(0);
   size_t index_i = get_global_id(1);
@@ -24,5 +24,33 @@ __kernel void ycbcr(__global unsigned char* pixels, uint width, uint height, __g
   group_result[ y_index] = (unsigned char) y;
   group_result[cb_index] = (unsigned char) cb;
   group_result[cr_index] = (unsigned char) cr;
+
+}
+
+__kernel void to_rgb(__global unsigned char* pixels, uint width, uint height, __global unsigned char* group_result){
+  float y, cb, cr;
+  size_t index_j = get_global_id(0);
+  size_t index_i = get_global_id(1);
+  unsigned char r, g, b;
+
+  int y_index  = index_j * width  + index_i;
+  int cb_index = index_j * width  + index_i +     width * height;
+  int cr_index = index_j * width  + index_i + 2 * width * height;
+
+   y = pixels[ y_index];
+  cb = pixels[cb_index];
+  cr = pixels[cr_index];
+
+  r = y                       + 1.402   * (cr - 128);
+  g = y -0.34414 * (cb - 128) - 0.71414 * (cr - 128);
+  b = y +1.772   * (cb - 128);
+
+  int r_index = index_j * width * 3 + index_i * 3;
+  int g_index = index_j * width * 3 + index_i * 3 + 1;
+  int b_index = index_j * width * 3 + index_i * 3 + 2;
+
+  group_result[r_index] = (unsigned char) r;
+  group_result[g_index] = (unsigned char) g;
+  group_result[b_index] = (unsigned char) b;
 
 }
