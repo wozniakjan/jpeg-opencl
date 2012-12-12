@@ -213,6 +213,25 @@ float* JpegPicture::get_block(int i){
     return NULL;
 }
 
+void JpegPicture::save_data(unsigned char* data){
+    int x, y;
+    int block_x, block_y, block;
+    int block_i_x, block_i_y, block_i; 
+    int max_block = ceil((double)cols/8.0);
+
+    for(int i = 0; i<rows*cols; i++){
+        x = i % cols;
+        y = i / cols;
+        block_x = x / 8;
+        block_y = y / 8;
+        block = block_y*max_block + block_x;
+        block_i_x = x % 8;
+        block_i_y = y % 8;
+        block_i = block_i_y*8+block_i_x; 
+        data[i] = (unsigned char)blocks[block][block_i]; 
+    }
+}
+
 // Saves the picture from memory to the file
 void JpegPicture::save_to_file(string file_name) {
     ofstream pic(file_name.c_str(), ios::out | ios::binary);

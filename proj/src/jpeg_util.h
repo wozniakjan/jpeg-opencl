@@ -108,6 +108,7 @@ class JpegPicture {
 
         void save_to_file(std::string file_name);
         float* get_block(int i);
+        void save_data(unsigned char* data);
 };
 
 #endif
