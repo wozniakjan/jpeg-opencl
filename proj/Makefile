@@ -13,7 +13,7 @@ BIN   = bin/
 FLAGS = -std=c++98 -Wall -pedantic -w
 CC    = g++
 OBJS  = $(shell ls src/*cpp | sed s/src/bin/g | sed s/cpp/o/g)
-DOC   = dokumentace
+DOC   = gmu
 
 
 ifeq ($(OS), Darwin)
