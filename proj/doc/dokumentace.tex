@@ -23,13 +23,22 @@
 \end{center}
 
 
-\section{Úvod}
+\section{Zadání}
 Úkolem projektu bylo vybrat částí algoritmu při kompresi/dekompresi, které jsou vhodné pro paralelizaci, implementovat
 a optimalizovat dané části v OpenCL a nakonec porovant rychlost implementace s CPU. Jelikož implementace JPEG kodéru a
 dekodéru je velmi pracnou záležitostí\cite{t81}, rozhodli jsme se výkonnosti jednotlivých částí pipeline implementovat
 a měřit zvlášť.
 
 Dále jsou v textu popsány vybrané algoritmy a porovnání paralelních variant na GPU se seriovými, které vykonává CPU.
+
+\section{Použité technologie a zdroje}
+\begin{itemize}
+\item OpenCL -- pro paralelizaci algoritmů
+\item STL kontejnery -- pro usnadnění práce s některými dynamickými typy, tvořen je vektor JPEG markerů
+\item Vim -- editor
+\item GNU Make -- nástroj pro buildování
+\item ostatní zdroje jsou uvedeny mezi citacemi
+\end{itemize}
 
 \section{Teoretický rozbor} %asi by bylo vhodne lepe pojmenovat tuto kapitolu
 Schéma pipeline pro sekvenční režim JPEG komprese na obrázku \ref{pipeline} obsahuje barevně odlišené bloky, což jsou algoritmy,
@@ -98,7 +107,7 @@ a třetím argumentem je kvantizační tabulka, neboť v rámci optimalizace jsm
 \texttt{void ycbcr\_gpu(pixmap* data, unsigned char* dst)} -- paralelně\\
 \texttt{pixmap} je struktura obashující rozměry a rastrová data. Do sériového výpočtu vstupují tři pixmapy (Y, $C_b$, $C_r$) pro uložení výsledků a pixmapa s načteným obrázkem. V paralelní implementaci vstupuje pixmapa s obrázkem a druhým argumentem je pole, do kterého se ukládají všechny tři složky. 
 
-\section{Závěr}
+\section{Dosažené výsledky}
 Výsledkem naší práce je srovnání rychlosti implementací na těchto strojích.
 \begin{itemize}
 \item Ubuntu -- Core 2 Duo (T7500) 2.20GHz, NVIDIA GeForce 8600M GT
@@ -113,10 +122,8 @@ Hodnoty měření jsou uvedeny v milisekundách, porovnávány jsou paralelní v
 \begin{tabular}{|l|cc|cc|cc|}\hline%
 \multirow{2}{*}{Algoritmus}&\multicolumn{2}{|c|}{Ubuntu}&\multicolumn{2}{|c|}{Debian}&\multicolumn{2}{|c|}{OS X}\\
           &serial [ms]&paralel [ms]&serial [ms]&paralel [ms]&serial [ms]&paralel [ms]\\\hline%
-\texttt{RGB to YCbCr}&447.89&1008.18&3&4&5&6\\
+\texttt{RGB to YCbCr}&447.89&1008.18&249.455&260.006&288.742&539.234\\
 \texttt{YCbCr to RGB}&1&2&3&4&5&6\\
-\texttt{Huffman}     &1&2&3&4&5&6\\
-\texttt{Inv\_Huffman} &1&2&3&4&5&6\\
 \texttt{DCT}         &0.527859&1.49798&0.320911&0.144005&0.410795&0.264168\\
 \texttt{Inv\_DCT}    &0.527143&1.14584&0.276089&0.113011&0.396967&0.203848\\
 \hline
@@ -126,6 +133,35 @@ Hodnoty měření jsou uvedeny v milisekundách, porovnávány jsou paralelní v
 \caption{Tabulka srovnání doby výpočtu jednotlivých algoritmů.}
 \label{ps_history}
 \end{table}
+
+\section{Autoevaluace}
+\begin{itemize}
+\item \textbf{Technický návrh: 60\%} -- původní plán si dával za cíl vytvořit úplný kodér JPEG formátu, což
+				není nikterak triviální úloha. Rozhodně přínosnější, než pochopit vnitřní strukturu JPEG
+				souboru uloženého na disku by bylo vybrat jen určité algoritmy a důkladněji se zabývat
+				optimalizací.
+\item \textbf{Programování: 85\%} -- absence rozáhlejších komentářů v některých oblastech může zhoršit čitelnost,
+				ale to je jen u triviálních metod/funkcí. Celkově je projekt rozdělen logicky do samostantých
+				modulů.
+\item \textbf{Vzhled vytvořeného řešení: n/a} -- mělo se jednat o konzolovou aplikaci.
+\item \textbf{Využití zdrojů: 90\%} -- přesný popis JPEG formátu poskytuje nejlépe takřka 190 stranová 
+				specifikace. Vzhledem k náročnosti tohoto textu bylo ale pro nás nezbytné zpočátku hledat 
+				srozumitelnější	informace i jinde.
+\item \textbf{Hospodaření s časem: 40\%} -- viz. technický návrh.
+\item \textbf{Spolupráce v týmu: 100\%} -- pro verzování kódu jsme použili program Git, práce byla produktivní
+				i přes nedotažení původního cíle dokonce.
+\item \textbf{Celkový dojem 80\%} -- tím, že je JPEG formát jedním z nejpoužívanějších digitálních obrazových
+				formátů, je znalost jeho struktury určitě užitečná pro každého informatika. Rozhodně
+				jsme se naučili ocenit práci, kterou udělali jiní programátoři a dříve triviální otevření
+				"džejpegu" respektujeme daleko více.
+			
+\end{itemize}
+
+\section{Rozdělení práce}
+\begin{itemize}
+\item Lucie Matušová -- převod barevných modelů, extrakce raw dat z tga formátu, huffmanovo kódování
+\item Jan Wozniak -- DCT, kvantizace, JPEG markery a jeho bloková struktura
+\end{itemize}
 
 %
 %

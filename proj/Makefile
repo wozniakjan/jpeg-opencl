@@ -43,7 +43,7 @@ $(BIN):
 	$(shell mkdir $(BIN))
 
 
-doc: doc/$(DOC).tex
+docu: doc/$(DOC).tex
 	cd doc; pdflatex $(DOC)
 	cd doc; pdflatex $(DOC)
 
