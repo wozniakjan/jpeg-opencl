@@ -431,6 +431,21 @@ void saveTruecolorPixmap(pixmap *data, const char *imgname)
     cout << "image created!" << endl;
 }
 
+void color_transform (const char* image) {
+    pixmap *data = loadTGAdata(image);
+    if (data == NULL) return;
+
+    pixmap *Y, *Cb, *Cr;
+
+    Y  = createPixmap(data->width, data->height, 1); // 1 byte per pixel
+    Cb = createPixmap(data->width, data->height, 1);
+    Cr = createPixmap(data->width, data->height, 1);
+
+    rgb_to_ycbcr(Y, Cb, Cr, data);
+    saveGrayscalePixmap( Y,  "Y_cpu.tga");
+    saveGrayscalePixmap(Cb, "Cb_cpu.tga");
+    saveGrayscalePixmap(Cr, "Cr_cpu.tga");
+}
 
 /*
 int main(int argc, char **argv) {

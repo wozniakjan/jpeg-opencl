@@ -19,5 +19,6 @@ pixmap * loadTGAdata (const char * imgname);
 void saveGrayscalePixmap(pixmap *data, const char *imgname);
 void rgb_to_ycbcr(pixmap * Y, pixmap *Cb, pixmap *Cr, pixmap *data);
 pixmap* createPixmap(unsigned int width, unsigned int height, unsigned int bytespp);
+void color_transform (const char* image);
 
 #endif

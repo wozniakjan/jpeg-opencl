@@ -10,45 +10,34 @@ using namespace std;
 void measure_dct();
 void measure_rgb_to_ycbcr();
 void measure_huffman();
-void color_transform (const char* image);
+void measure_color_transform(const char *image);
 
 int main(int argc, char* argv[])
 {
     load_table("../stuff/chrominace_table",chrominace_table);
     load_table("../stuff/luminace_table",luminace_table);
 
-    color_transform("../stuff/sample3.tga");
+    //color_transform("../stuff/sample3.tga");
 
+    measure_color_transform("../stuff/sample3.tga");
     //measure_dct();
 
     //p->save_to_file("test.jpg");
     return 0;
 }
 
+void measure_color_transform(const char *image) {
 
+    double t1 = get_time();
+    color_transform("../stuff/sample1.tga");
+    double t2 = get_time();
+    color_transform_gpu("../stuff/sample1.tga");
+    double t3 = get_time();
 
-void color_transform (const char* image) {
-    pixmap *data = loadTGAdata(image);
-    int size = data->width * data->height;
-    unsigned char dst[size*3];
+    cout << "\n\nmethod             time [s]\n";
+    cout << "color transform:     " << t2-t1 << "\n";
+    cout << "color transform GPU: " << t3-t2 << "\n";
 
-    initOpenCL();
-    ycbcr_gpu(data, dst);
-
-    pixmap *Y, *Cb, *Cr;
-
-    Y  = createPixmap(data->width, data->height, 1); // 1 byte per pixel
-    Cb = createPixmap(data->width, data->height, 1);
-    Cr = createPixmap(data->width, data->height, 1);
-
-    memcpy ( Y->pixels,            dst, size);
-    memcpy (Cb->pixels,     dst + size, size);
-    memcpy (Cr->pixels, dst + size * 2, size);
-
-    //rgb_to_ycbcr(Y, Cb, Cr, data);
-    saveGrayscalePixmap( Y,  "Y.tga");
-    saveGrayscalePixmap(Cb, "Cb.tga");
-    saveGrayscalePixmap(Cr, "Cr.tga");
 }
 
 void measure_dct(){
