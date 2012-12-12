@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
         cout << (int)pic2[i];
     }*/
 	
-	cleanup();
+	//cleanup();
     	
     return 0;
 }
@@ -151,7 +151,6 @@ void measure_color_transform(const char *image_name) {
 	free(Cb);
 	free(Cr);
 	free(rgb);
-	
 }
 
 void measure_dct(){

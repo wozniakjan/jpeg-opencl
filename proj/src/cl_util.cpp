@@ -330,10 +330,10 @@ void to_ycbcr_gpu(unsigned char* data, unsigned int width, unsigned int height, 
     else l_gcd = gcd2;
 
     size_t GWS[2], LWS[2];
-    GWS[0] = height*3;
-    GWS[1] = width*3;
-    LWS[0] = gcd1;
-    LWS[1] = gcd2;
+    GWS[0] = height;
+    GWS[1] = width;
+    LWS[0] = 1;
+    LWS[1] = 1;
 
     clEnqueueNDRangeKernel(queue, kernel_ycbcr, 2, NULL, GWS, LWS, 0, NULL, NULL);
 
@@ -361,10 +361,10 @@ void to_rgb_gpu(unsigned char* data, unsigned int width, unsigned int height, un
     else l_gcd = gcd2;
 
     size_t GWS[2], LWS[2];
-    GWS[0] = height*3;
-    GWS[1] = width*3;
-    LWS[0] = gcd1;
-    LWS[1] = gcd2;
+    GWS[0] = height;
+    GWS[1] = width;
+    LWS[0] = 1;
+    LWS[1] = 1;
 
     clEnqueueNDRangeKernel(queue, kernel_rgb, 2, NULL, GWS, LWS, 0, NULL, NULL);
 
