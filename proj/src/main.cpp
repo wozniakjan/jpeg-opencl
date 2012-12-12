@@ -11,6 +11,7 @@ void measure_dct();
 void measure_rgb_to_ycbcr();
 void measure_huffman();
 void measure_color_transform(const char *image);
+void test_compress_decompress(const char *src, const char *dst);
 
 int main(int argc, char* argv[])
 {
@@ -19,8 +20,9 @@ int main(int argc, char* argv[])
 
     initOpenCL();
 
-    measure_color_transform("../stuff/sample1.tga");
-    measure_dct();
+    test_compress_decompress("../stuff/sample3.tga", "../stuff/sample3_out.tga");
+    //measure_color_transform("../stuff/sample1.tga");
+    //measure_dct();
 
     /*unsigned char pic[100];
     unsigned char pic2[100];
@@ -38,6 +40,45 @@ int main(int argc, char* argv[])
     }*/
 
     return 0;
+}
+
+void test_compress_decompress(const char *src, const char *dst){
+    pixmap *image = loadTGAdata(src);
+    
+    pixmap *Y, *Cb, *Cr;
+    Y = createPixmap(image->width, image->height, 1);
+    Cb = createPixmap(image->width, image->height, 1);
+    Cr = createPixmap(image->width, image->height, 1);
+
+    rgb_to_ycbcr(Y, Cb, Cr, image);
+
+    JpegPicture* jpeg_y = new JpegPicture(Y->pixels, (int)(image->height), (int)(image->width));
+    JpegPicture* jpeg_y_tmp = new JpegPicture(Y->pixels, (int)(image->height), (int)(image->width));
+    JpegPicture* jpeg_cb = new JpegPicture(Cb->pixels, (int)(image->height), (int)(image->width));
+    JpegPicture* jpeg_cb_tmp = new JpegPicture(Cb->pixels, (int)(image->height), (int)(image->width));
+    JpegPicture* jpeg_cr = new JpegPicture(Cr->pixels, (int)(image->height), (int)(image->width));
+    JpegPicture* jpeg_cr_tmp = new JpegPicture(Cr->pixels, (int)(image->height), (int)(image->width));
+   
+    
+
+    for(int i = 0; i < jpeg_y->block_count; i++){
+        dct8x8(jpeg_y->get_block(i),jpeg_y_tmp->get_block(i),luminace_table);
+        inv_dct8x8(jpeg_y_tmp->get_block(i),jpeg_y->get_block(i));
+       
+        dct8x8(jpeg_cb->get_block(i),jpeg_cb_tmp->get_block(i),chrominace_table); 
+        inv_dct8x8(jpeg_cb_tmp->get_block(i),jpeg_cb->get_block(i));
+       
+        dct8x8(jpeg_cr->get_block(i),jpeg_cr_tmp->get_block(i),chrominace_table); 
+        inv_dct8x8(jpeg_cr_tmp->get_block(i),jpeg_cr->get_block(i));
+    }
+
+    jpeg_y->save_data(Y->pixels);
+    jpeg_cb->save_data(Cb->pixels);
+    jpeg_cr->save_data(Cr->pixels);
+
+    pixmap *output = ycbcr_to_rgb(Y, Cb, Cr);
+    
+    saveTruecolorPixmap(output, dst);
 }
 
 void measure_color_transform(const char *image_name) {
