@@ -62,7 +62,8 @@ c[k,j] &=& \sum^{N-1}_{n=0}{\sum^{N-1}_{m=0}{f[n,m]g_{k,j}[n,m]}}\label{dct3}
 bloku je nejprve vydělena příslušnou hodnotou v tabulce, zaokrouhlena a poté vynásobena stejnou hodnotou z tabulky.
 Pro kvantizaci je definováno několik vhodných tabulek\cite{t81}.
 
-\textit{Huffmanovo kódování} kvantovaných složek probíhá pro stejnosměrné a střídavé koeficienty zvlášť. Před samotným kódováním se tyto složky upraví, aby došlo k redukci výsledného počtu bitů. Nad blokem DC koeficientů spočítáme diferenci, tj. odečteme hodnotu předchozího bloku. Jelikož DC složka odpovídá průměrnému jasu či barvě pixelů v daném bloku a obrázky většinou obsahují souvislé barevné plochy, vniknou takto nízké hodnoty\cite{root}. U AC složek se provádí RLC kódování. Mnoho z nich má totiž nulovou hodnotu, je proto výhodné zapsat sekvence nul efektivně. Výstupem jsou bajty ve tvaru "RRRRSSSS", kde RRRR je počet předcházejicích nulových koeficientů a SSSS značí kategorii hodnoty koeficientu.
+\textit{Huffmanovo kódování} kvantovaných složek probíhá pro stejnosměrné a střídavé koeficienty zvlášť. Před samotným kódováním se tyto složky upraví, aby došlo k redukci výsledného počtu bitů. Nad blokem DC koeficientů spočítáme diferenci, tj. odečteme hodnotu předchozího bloku. Jelikož DC složka odpovídá průměrnému jasu či barvě pixelů v daném bloku a obrázky většinou obsahují souvislé barevné plochy, vniknou takto nízké hodnoty\cite{root}. U AC složek se provádí RLC kódování. Mnoho z nich má totiž nulovou hodnotu, je proto výhodné zapsat sekvence nul efektivně. Výstupem jsou bajty ve tvaru "RRRRSSSS". RRRR je počet nulových koeficientů předcházejicích nenulový koeficient. Pokud je tento počet větší než 15, zapíše se hodnota 0xF0. Pokud jsme na konci a zbývají již samé nuly, zapisuje se 0x00. SSSS značí kategorii hodnoty koeficientu.
+Huffmanovo kódování probíhá na základě čtyř tabulek - koeficienty DC a AC, které mohou být pro jasovou složku (Y) nebo barvové složky ($C_b$, $C_r$). U DC složky probíhá tak, že se 11-bitová hodnota diference zakóduje podle jedné z tabulek (Y nebo $C_b$, $C_r$) a za tento kód se přidá samotná hodnota diference ve dvojkovém doplňku. AC koeficienty projdou stejným procesem, akorát jsou pro ně kvůli většímu rozsahu použity rozsáhlejší tabulky.
 
 \begin{figure}[H]
   \centering
@@ -86,10 +87,16 @@ modul (zig-zag, kvantizace, DCT ...).
 
 \texttt{void dct8x8(float* block, float* dct, int* table)} -- sériově
 
-\texttt{void dct8x8\_gpu(float* block, float* dst, cl\_mem* table)} -- paralélně\\
+\texttt{void dct8x8\_gpu(float* block, float* dst, cl\_mem* table)} -- paralelně\\
 kde prvním argumentem jsou data bloku vstupujícího do DCT, druhým argumentem pole pro výstupní AC a DC koeficienty DCT
 a třetím argumentem je kvantizační tabulka, neboť v rámci optimalizace jsme sjednotili kvantizaci s DCT.
 
+\textit{Převod barevného modelu} je implementován pomocí dvou funkcí:
+
+\texttt{void rgb\_to\_ycbcr(pixmap *Y, pixmap *Cb, pixmap *Cr, pixmap *data)} -- sériově
+
+\texttt{void ycbcr\_gpu(pixmap* data, unsigned char* dst)} -- paralelně\\
+\texttt{pixmap} je struktura obashující rozměry a rastrová data. Do sériového výpočtu vstupují tři pixmapy (Y, $C_b$, $C_r$) pro uložení výsledků a pixmapa s načteným obrázkem. V paralelní implementaci vstupuje pixmapa s obrázkem a druhým argumentem je pole, do kterého se ukládají všechny tři složky. 
 
 \section{Závěr}
 Výsledkem naší práce je srovnání rychlosti implementací na těchto strojích.
