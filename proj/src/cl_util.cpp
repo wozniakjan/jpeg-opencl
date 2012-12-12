@@ -116,13 +116,12 @@ int initOpenCL(){
     queue = clCreateCommandQueue(context, devices[0], 0, &error);
     checkClError(error, "clCreateCommandQueue");
 
- /* // musela jsem zakomentovat, jinak to pres tohle neproslo.
     // Load kernels
     error = loadKernelFromFile("../src/jpeg.cl", &dct_kernel, "dct8x8");
     checkClError(error, "loadKernelFromFile");
     error = loadKernelFromFile("../src/jpeg.cl", &inv_dct_kernel, "inv_dct8x8");
     checkClError(error, "loadKernelFromFile");
-    */
+
 
     error = loadKernelFromFile("../src/ycbcr.cl", &kernel_ycbcr, "ycbcr");
     checkClError(error, "loadKernelFromFile");
@@ -200,12 +199,6 @@ void dct8x8_gpu(float* src, float* dst, cl_mem* table){
             0,         //wait list
             NULL,      //wait list
             NULL);     //wait list
-    size_t len;
-    char log[32048];
-    memset(log, 0, sizeof(log));
-    clGetProgramBuildInfo(program, devices[0], CL_PROGRAM_BUILD_LOG, sizeof(log), log, &len);
-    cout<<"--- Build log ---\n "<<log<<endl;
-    checkClError(error,"clEnqueueWriteBuffer");
 
     clSetKernelArg(dct_kernel, 0, sizeof(cl_mem), (void *)&block_src);
     clSetKernelArg(dct_kernel, 1, sizeof(cl_mem), (void *)&block_dst);
@@ -303,14 +296,20 @@ void ycbcr_gpu(pixmap* data, unsigned char* dst){
     clSetKernelArg(kernel_ycbcr, 2, sizeof(cl_uint), &(data->height));
     clSetKernelArg(kernel_ycbcr, 3, sizeof(cl_mem), (void *)&dst_ycbcr);
 
-    size_t GWS[2], LWS[2];
-    GWS[0] = data->height*3;
-    GWS[1] = data->width*3;
-    LWS[0] = gcd(data->height*3, max_work_item_size[0]);
-    LWS[1] = gcd(data->width*3,  max_work_item_size[1]);
 
-    cout << "gcd - LWS[0]=" << gcd(data->height, max_work_item_size[0]) << endl;
-    cout << "gcd - LWS[1]=" <<gcd(data->width,  max_work_item_size[1])  << endl;
+    int l_gcd, gcd1, gcd2;
+    gcd1 = gcd(data->height, max_work_item_size[0]);
+    gcd2 = gcd(data->width,  max_work_item_size[1]);
+    //cout << "gcd1=" << gcd(data->height, max_work_item_size[0]) << endl;
+    //cout << "gcd2=" << gcd(data->width,  max_work_item_size[1])  << endl;
+    if (gcd1<gcd2) l_gcd = gcd1;
+    else l_gcd = gcd2;
+
+    size_t GWS[2], LWS[2];
+    GWS[0] = data->height;
+    GWS[1] = data->width;
+    LWS[0] = l_gcd;
+    LWS[1] = l_gcd;
 
     clEnqueueNDRangeKernel(queue, kernel_ycbcr, 2, NULL, GWS, LWS, 0, NULL, NULL);
 
@@ -325,8 +324,6 @@ void color_transform_gpu (const char* image) {
     int size = data->width * data->height;
 
     unsigned char *dst = new unsigned char[size*3];
-    cout << "pred." << endl;
-    initOpenCL();
     ycbcr_gpu(data, dst);
 
     pixmap *Y, *Cb, *Cr;
@@ -343,7 +340,7 @@ void color_transform_gpu (const char* image) {
     saveGrayscalePixmap( Y,  "Y_gpu.tga");
     saveGrayscalePixmap(Cb, "Cb_gpu.tga");
     saveGrayscalePixmap(Cr, "Cr_gpu.tga");
-    free(dst);
+
 }
 
 /**

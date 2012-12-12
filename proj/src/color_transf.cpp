@@ -297,7 +297,7 @@ pixmap * loadTGAdata (const char * imgname) {
     }
     memcpy(&pallength, tgaHeader+5, 2); // copy palette length
 
-    cout << " name:  " << imgname << endl << " width:  " << width << endl << " height: " << height << endl << " bpp:    " << bpp << endl;
+    //cout << " name:  " << imgname << endl << " width:  " << width << endl << " height: " << height << endl << " bpp:    " << bpp << endl;
 
     data = createPixmap(width, height, 3);  // 3 bytes per pixel
 
@@ -329,7 +329,7 @@ pixmap * loadTGAdata (const char * imgname) {
     }
 
     fclose(f);
-    cout << "Yaaay! pixmap loaded" << endl << endl;
+    //cout << "Yaaay! pixmap loaded" << endl << endl;
     return data;
 }
 
@@ -352,7 +352,7 @@ void saveGrayscalePixmap(pixmap *data, const char *imgname) {
                         0x20                    // bitmap orientation
     };
 
-    cout << " name:  " << imgname << endl << " width:  " << data->width << endl << " height: " << data->height << endl << " bpp:    " << 8 << endl;
+    //cout << " name:  " << imgname << endl << " width:  " << data->width << endl << " height: " << data->height << endl << " bpp:    " << 8 << endl;
 
     memcpy(tgaHeader+12, &(data->width), 2);
     memcpy(tgaHeader+14, &(data->height), 2);
@@ -372,7 +372,7 @@ void saveGrayscalePixmap(pixmap *data, const char *imgname) {
     }
 
     fclose(f);
-    cout << "pixmap saved. image created!" << endl;
+    //cout << "pixmap saved. image created!" << endl;
 }
 
 void saveTruecolorPixmap(pixmap *data, const char *imgname)
@@ -427,8 +427,7 @@ void saveTruecolorPixmap(pixmap *data, const char *imgname)
         }
         fclose(f);
     }
-
-    cout << "image created!" << endl;
+    //cout << "image created!" << endl;
 }
 
 void color_transform (const char* image) {

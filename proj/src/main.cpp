@@ -17,9 +17,9 @@ int main(int argc, char* argv[])
     load_table("../stuff/chrominace_table",chrominace_table);
     load_table("../stuff/luminace_table",luminace_table);
 
-    //color_transform("../stuff/sample3.tga");
+    initOpenCL();
 
-    measure_color_transform("../stuff/sample3.tga");
+    measure_color_transform("../stuff/sample1.tga");
     //measure_dct();
 
     //p->save_to_file("test.jpg");
@@ -29,9 +29,9 @@ int main(int argc, char* argv[])
 void measure_color_transform(const char *image) {
 
     double t1 = get_time();
-    color_transform("../stuff/sample1.tga");
+    color_transform(image);
     double t2 = get_time();
-    color_transform_gpu("../stuff/sample1.tga");
+    color_transform_gpu(image);
     double t3 = get_time();
 
     cout << "\n\nmethod             time [s]\n";
