@@ -570,18 +570,23 @@ int cleanup()
     status = clReleaseMemObject(cl_chrominace_table);
     checkClError(status, "clReleaseMemObject cl_chrominace_table");
 
-    status = clReleaseMemObject(src_rgb);
-    checkClError(status, "clReleaseMemObject src_rgb");
+    if (src_rgb != NULL) {
+        status = clReleaseMemObject(src_rgb);
+        checkClError(status, "clReleaseMemObject src_rgb");
+    }
 
-    status = clReleaseMemObject(dst_ycbcr);
-    checkClError(status, "clReleaseMemObject dst_ycbcr");
-
-    status = clReleaseMemObject(src_ycbcr);
-    checkClError(status, "clReleaseMemObject src_ycbcr");
-
-    status = clReleaseMemObject(dst_rgb);
-    checkClError(status, "clReleaseMemObject dst_rgb");
-
+    if (dst_ycbcr != NULL) {
+        status = clReleaseMemObject(dst_ycbcr);
+        checkClError(status, "clReleaseMemObject dst_ycbcr");
+    }
+    if (src_ycbcr != NULL) {
+        status = clReleaseMemObject(src_ycbcr);
+        checkClError(status, "clReleaseMemObject src_ycbcr");
+    }
+    if (dst_rgb != NULL) {
+        status = clReleaseMemObject(dst_rgb);
+        checkClError(status, "clReleaseMemObject dst_rgb");
+    }
     status = clReleaseCommandQueue(queue);
     checkClError(status, "clReleaseCommandQueue.");
 
