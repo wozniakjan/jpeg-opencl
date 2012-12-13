@@ -12,16 +12,44 @@ void measure_rgb_to_ycbcr();
 void measure_huffman();
 void measure_color_transform(const char *image);
 void test_compress_decompress(const char *src, const char *dst);
+void print_help();
 
 int main(int argc, char* argv[]) {
 	
+	/*
+	 *  -m dct zavola measure dct
+		-m clr zavola measure_color_transform
+		-t [in] [out] zavola test_compress_decompress(in,out)
+		-h nebo bez parametru zobrazi help
+		
+	 * */
+	 
+	if (argc <= 2) {
+		print_help();
+		return 0;
+	}
+	
+	initOpenCL();
+    
     load_table("../stuff/chrominace_table",chrominace_table);
     load_table("../stuff/luminace_table",luminace_table);
 
-    initOpenCL();
-
+	
+    if ((argc == 3) && ((strcmp(argv[1], "-m") == 0))) {
+        if ((strcmp(argv[2], "dct") == 0)) {
+			measure_dct();
+		}
+    } else if (argc == 4) {
+        if (strcmp(argv[1], "-t") == 0) {
+			test_compress_decompress(argv[2],argv[3]);
+		}
+		else if ((strcmp(argv[1], "-m") == 0) && (strcmp(argv[2], "clr") == 0)) {
+			measure_color_transform(argv[3]);
+		}
+	}
+	
     //test_compress_decompress("../stuff/sample3.tga", "../stuff/sample3_out.tga");
-    measure_color_transform("../stuff/sample2.tga");
+    //measure_color_transform("../stuff/sample3.tga");
     //measure_dct();
 
     /*unsigned char pic[100];
@@ -42,6 +70,20 @@ int main(int argc, char* argv[]) {
 	//cleanup();
     	
     return 0;
+}
+
+
+void print_help() {
+
+	cout << "Komprese JPEG pomoci 3D akceleracni karty" << endl << endl;
+	cout << "Spusteni:" << endl;
+	cout << "-h         zobrazi tuto napovedu" << endl;
+	cout << "-m dct     DCT a inverzni DCT" << endl;
+	cout << "-m clr IN  nacte obrazek IN.TGA, prevede do YCbCr a zpet do RGB" << endl;
+	cout << "-t IN OUT  nacte obrazek IN.TGA, prevede do YCbCr, provede DCT, " << endl;
+	cout << "            inverzni DCT a ulozi do OUT.TGA v RGB" << endl << endl;
+	cout << "L. Matusova, J. Wozniak" << endl;	
+	
 }
 
 void test_compress_decompress(const char *src, const char *dst){
@@ -105,10 +147,12 @@ void measure_color_transform(const char *image_name) {
     saveGrayscalePixmap( Y,  "Y_cpu.tga");
     saveGrayscalePixmap(Cb, "Cb_cpu.tga");
     saveGrayscalePixmap(Cr, "Cr_cpu.tga");
+    
+    double t5 = get_time();
     // and back to rgb
     pixmap *image_transf = ycbcr_to_rgb(Y, Cb, Cr);
+	double t6 = get_time();
     saveTruecolorPixmap(image_transf, "transformed.tga");
-
 
     // create buffer for results from gpu computing
     unsigned char *dst = new unsigned char[size*3];
@@ -128,10 +172,11 @@ void measure_color_transform(const char *image_name) {
     saveGrayscalePixmap(Cb, "Cb_gpu.tga");
     saveGrayscalePixmap(Cr, "Cr_gpu.tga");
 
-
     // create truecolor picture from given Y, Cb, Cr
     unsigned char *dst2 = new unsigned char[size*3];
+    double t7 = get_time();
     to_rgb_gpu(dst, width, height, dst2);
+	double t8 = get_time();
 
     pixmap *rgb;
     rgb  = createPixmap(width, height, 3);
@@ -139,13 +184,11 @@ void measure_color_transform(const char *image_name) {
     saveTruecolorPixmap(rgb, "transformed_gpu.tga");
 
     cout << "\n\nmethod             time [s]\n";
-    cout << "color transform:     " << t2-t1 << "\n";
-    cout << "color transform GPU: " << t4-t3 << "\n";
-
-
-    cout << "\n\nmethod             time [s]\n";
-    cout << "color transform:     " << t2-t1 << "\n";
-    cout << "color transform GPU: " << t4-t3 << "\n";
+    cout << "RGB>YCbCr       " << t2-t1 << "\n";
+    cout << "RGB>YCbCr - GPU " << t4-t3 << "\n";
+    
+    cout << "YCbCr>RGB       " << t6-t5 << "\n";
+    cout << "YCbCr>RGB - GPU " << t8-t7 << "\n";
 
 	free(Y);
 	free(Cb);
