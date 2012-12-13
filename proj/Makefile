@@ -49,7 +49,7 @@ docu: doc/$(DOC).tex
 
 
 edit:
-	vim -S session.vim
+	vim -S ses.vim
 
 run:
 	cd $(BIN); ./$(PROJ) -m clr ../stuff/sample3.tga

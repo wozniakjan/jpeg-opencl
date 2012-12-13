@@ -47,27 +47,8 @@ int main(int argc, char* argv[]) {
 			measure_color_transform(argv[3]);
 		}
 	}
-	
-    //test_compress_decompress("../stuff/sample3.tga", "../stuff/sample3_out.tga");
-    //measure_color_transform("../stuff/sample3.tga");
-    //measure_dct();
-
-    /*unsigned char pic[100];
-    unsigned char pic2[100];
-
-    for(int i = 0; i < 100; i++){
-        pic[i] = i;
-    }
-
-    JpegPicture* jpeg = new JpegPicture(pic,10,10);
-    jpeg->save_data(pic2);
-
-    for(int i = 0; i < 100; i++){
-        if(i%10==0) std::cout << "\n";
-        cout << (int)pic2[i];
-    }*/
-	
-	//cleanup();
+		
+	cleanup();
     	
     return 0;
 }
