@@ -26,6 +26,8 @@ ifeq ($(OS), CYGWIN_NT-5.1)
 else
 	LIBS=-lOpenCL
 	CL_FLAGS=-I/usr/local/cuda/include/ #-L/opt/AMDAPP/lib/ -I/opt/AMDAPP/include/
+	OBJ_CL_FLAGS=-I/usr/local/cuda/include/
+	OBJ_LIBS=-lOpenCL
 endif
 endif
 
@@ -34,7 +36,7 @@ endif
 all: $(BIN)$(PROJ)
 
 $(BIN)%.o: $(SRC)%.cpp $(BIN)
-	$(CC) -c $(FLAGS) $(CL_FLAGS) $< -o $@ $(LIBS)
+	$(CC) -c $(FLAGS) $(OBJ_CL_FLAGS) $< -o $@ $(OBJ_LIBS)
 
 $(BIN)$(PROJ): $(OBJS)
 	$(CC) $(FLAGS) $(OBJS) -o $(BIN)$(PROJ) $(CL_FLAGS) $(LIBS)
