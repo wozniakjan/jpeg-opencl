@@ -152,8 +152,8 @@ Konverze barevných prostorů byla testována na obrázku 4752x3168 pixelů, DCT
 \begin{tabular}{|l|cc|cc|cc|}\hline%
 \multirow{2}{*}{Algoritmus}&\multicolumn{2}{|c|}{Ubuntu}&\multicolumn{2}{|c|}{Debian}&\multicolumn{2}{|c|}{OS X}\\
           &serial [ms]&paralel [ms]&serial [ms]&paralel [ms]&serial [ms]&paralel [ms]\\\hline%
-\texttt{RGB to YCbCr}&1.84393&6.73485&249.455&260.006&288.742&539.234\\
-\texttt{YCbCr to RGB}&2.85697&6.87504&3&4&5&6\\
+\texttt{RGB to YCbCr}&447.89&1008.18&249.455&260.006&288.742&539.234\\
+\texttt{YCbCr to RGB}&1&2&3&4&5&6\\
 \texttt{DCT}         &0.527859&1.49798&0.320911&0.144005&0.410795&0.264168\\
 \texttt{Inv\_DCT}    &0.527143&1.14584&0.276089&0.113011&0.396967&0.203848\\
 \hline
@@ -173,6 +173,25 @@ Konverze barevných prostorů byla testována na obrázku 4752x3168 pixelů, DCT
   \label{pipeline}
 \end{figure}
 
+%---------------------------------------------------------------------------
+\section{Rozdělení práce}
+\begin{itemize}
+\item Lucie Matušová -- převod barevných modelů, extrakce raw dat z TGA formátu, Huffmanovo kódování
+\item Jan Wozniak -- DCT, kvantizace, JPEG markery a jeho bloková struktura
+\end{itemize}
+
+%---------------------------------------------------------------------------
+\section{Co bylo nejpracnější}
+
+Formát JPEG není triviální.  Norma \cite{t81} je složitě napsaná a ostatní zdroje poskytují většinou jen kusé informace. Implementace celé pipeline se nakonec ukázala v daném čase jako nereálná. Od začátku jsme se snažili implementovat všechny části podle doporučení z normy tak, aby bylo možné výsledný soubor dekomprimovat běžným prohlížečem obrázků (např. úpravy koeficientů vstupujících do Huffmanova kódování). Důsledkem byl nedostatek času na paralelizaci Huffmanova kódování.
+
+Komplikace také způsoboval fakt, že jeden z členů týmu nemá na svém počítači podporu OpenCL.
+
+%---------------------------------------------------------------------------
+\section{Zkušenosti získané řešením projektu}
+Zdokonalili jsme se v programování v OpenCl. Osvojili jsme si práci s jeho paměťovým modelem. Osvěžili jsme si znalosti kódování a důkladně prostudovali JPEG/JFIF. Také jsme si ověřili, že návrh a časový odhad  je na začátku klíčový. Možná by pomohlo na začátku své myšlenky více konzultovat se cvičícími.
+
+%---------------------------------------------------------------------------
 \section{Autoevaluace}
 \begin{itemize}
 \item \textbf{Technický návrh: 60\%} -- původní plán si dával za cíl vytvořit úplný kodér JPEG formátu, což
@@ -196,11 +215,7 @@ Konverze barevných prostorů byla testována na obrázku 4752x3168 pixelů, DCT
 			
 \end{itemize}
 
-\section{Rozdělení práce}
-\begin{itemize}
-\item Lucie Matušová -- převod barevných modelů, extrakce raw dat z tga formátu, huffmanovo kódování
-\item Jan Wozniak -- DCT, kvantizace, JPEG markery a jeho bloková struktura
-\end{itemize}
+
 
 %
 %
