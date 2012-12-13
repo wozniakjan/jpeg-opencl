@@ -152,10 +152,10 @@ Konverze barevných prostorů byla testována na obrázku 4752x3168 pixelů, DCT
 \begin{tabular}{|l|cc|cc|cc|}\hline%
 \multirow{2}{*}{Algoritmus}&\multicolumn{2}{|c|}{Ubuntu}&\multicolumn{2}{|c|}{Debian}&\multicolumn{2}{|c|}{OS X}\\
           &serial [ms]&paralel [ms]&serial [ms]&paralel [ms]&serial [ms]&paralel [ms]\\\hline%
-\texttt{RGB to YCbCr}&4.4789&10.0818    &1.14608&0.874043   &1.24693&1.94597\\
-\texttt{YCbCr to RGB}&1&2               &1.63078&0.766993   &1.86396&1.86396\\
-\texttt{DCT}         &0.527859&1.49798  &0.320911&0.144005  &0.410795&0.264168\\
-\texttt{Inv\_DCT}    &0.527143&1.14584  &0.276089&0.113011  &0.396967&0.203848\\
+\texttt{RGB to YCbCr}&1.9269&3.33095    &1.14608&0.874043   &1.24693&1.94597\\
+\texttt{YCbCr to RGB}&2.63119&2.99501               &1.63078&0.766993   &1.86396&1.86396\\
+\texttt{DCT}         &0.480175&1.13988  &0.320911&0.144005  &0.410795&0.264168\\
+\texttt{Inv\_DCT}    &0.487089&1.11485  &0.276089&0.113011  &0.396967&0.203848\\
 \hline
 \end{tabular}
 \renewcommand{\arraystretch}{1} %zvetseni mezer mezi radky v tabulce
