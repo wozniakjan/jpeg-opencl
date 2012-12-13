@@ -2,6 +2,8 @@
 #include "jpeg_util.h"
 #include "color_transf.h"
 
+#include <math.h>
+
 #define DEBUG
 
 
@@ -320,20 +322,16 @@ void to_ycbcr_gpu(unsigned char* data, unsigned int width, unsigned int height, 
     clSetKernelArg(kernel_ycbcr, 2, sizeof(cl_uint), &(height));
     clSetKernelArg(kernel_ycbcr, 3, sizeof(cl_mem), (void *)&dst_ycbcr);
 
-
-    int l_gcd, gcd1, gcd2;
-    gcd1 = gcd(height*3, max_work_item_size[0]);
-    gcd2 = gcd(width*3,  max_work_item_size[1]);
-    //cout << "gcd1=" << gcd(height, max_work_item_size[0]) << endl;
-    //cout << "gcd2=" << gcd(width,  max_work_item_size[1])  << endl;
-    if (gcd1<gcd2) l_gcd = gcd1;
-    else l_gcd = gcd2;
-
+    size_t max_LWS[2];
+    error = clGetKernelWorkGroupInfo (kernel_ycbcr, devices[0],
+                    CL_KERNEL_WORK_GROUP_SIZE, 2, NULL, max_LWS);
+    checkClError(error,"clGetKernelWorkGroupInfo");
+    
     size_t GWS[2], LWS[2];
-    GWS[0] = height;
-    GWS[1] = width;
-    LWS[0] = 1;
-    LWS[1] = 1;
+    LWS[0] = min((unsigned int)max_LWS[0],min((unsigned int)max_work_item_size[0], height));
+    LWS[1] = min((unsigned int)max_LWS[0],min((unsigned int)max_work_item_size[1], width));
+    GWS[0] = ceil(((float)height)/((float)LWS[0]))*LWS[0];
+    GWS[1] = ceil(((float)width)/((float)LWS[1]))*LWS[1];
 
     clEnqueueNDRangeKernel(queue, kernel_ycbcr, 2, NULL, GWS, LWS, 0, NULL, NULL);
 
@@ -350,21 +348,16 @@ void to_rgb_gpu(unsigned char* data, unsigned int width, unsigned int height, un
     clSetKernelArg(kernel_rgb, 2, sizeof(cl_uint), &(height));
     clSetKernelArg(kernel_rgb, 3, sizeof(cl_mem), (void *)&dst_rgb);
 
-
-    int l_gcd, gcd1, gcd2;
-    gcd1 = gcd(height*3, max_work_item_size[0]);
-    gcd2 = gcd(width*3,  max_work_item_size[1]);
-    cout << "height=" << height << " and width=" << width << endl;
-    cout << "gcd1=" << gcd(height*3, max_work_item_size[0]) << endl;
-    cout << "gcd2=" << gcd(width*3,  max_work_item_size[1])  << endl;
-    if (gcd1<gcd2) l_gcd = gcd1;
-    else l_gcd = gcd2;
-
+    size_t max_LWS[2];
+    error = clGetKernelWorkGroupInfo (kernel_ycbcr, devices[0],
+                    CL_KERNEL_WORK_GROUP_SIZE, 2, NULL, max_LWS);
+    checkClError(error,"clGetKernelWorkGroupInfo");
+    
     size_t GWS[2], LWS[2];
-    GWS[0] = height;
-    GWS[1] = width;
-    LWS[0] = 1;
-    LWS[1] = 1;
+    LWS[0] = min((unsigned int)max_LWS[0],min((unsigned int)max_work_item_size[0], height));
+    LWS[1] = min((unsigned int)max_LWS[0],min((unsigned int)max_work_item_size[1], width));
+    GWS[0] = ceil(((float)height)/((float)LWS[0]))*LWS[0];
+    GWS[1] = ceil(((float)width)/((float)LWS[1]))*LWS[1];
 
     clEnqueueNDRangeKernel(queue, kernel_rgb, 2, NULL, GWS, LWS, 0, NULL, NULL);
 

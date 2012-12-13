@@ -52,7 +52,7 @@ edit:
 	vim -S session.vim
 
 run:
-	cd $(BIN); ./$(PROJ)
+	cd $(BIN); ./$(PROJ) -m clr ../stuff/sample3.tga
 
 clean:
 	rm -rf $(BIN)*
