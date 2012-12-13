@@ -4,7 +4,7 @@
 
 #include <math.h>
 
-#define DEBUG
+//#define DEBUG
 
 
 using namespace std;
@@ -324,9 +324,9 @@ void to_ycbcr_gpu(unsigned char* data, unsigned int width, unsigned int height, 
 
     size_t max_LWS[2];
     error = clGetKernelWorkGroupInfo (kernel_ycbcr, devices[0],
-                    CL_KERNEL_WORK_GROUP_SIZE, 2, NULL, max_LWS);
+                    CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), NULL, max_LWS);
     checkClError(error,"clGetKernelWorkGroupInfo");
-    
+
     size_t GWS[2], LWS[2];
     LWS[0] = min((unsigned int)max_LWS[0],min((unsigned int)max_work_item_size[0], height));
     LWS[1] = min((unsigned int)max_LWS[0],min((unsigned int)max_work_item_size[1], width));
@@ -350,9 +350,9 @@ void to_rgb_gpu(unsigned char* data, unsigned int width, unsigned int height, un
 
     size_t max_LWS[2];
     error = clGetKernelWorkGroupInfo (kernel_ycbcr, devices[0],
-                    CL_KERNEL_WORK_GROUP_SIZE, 2, NULL, max_LWS);
+                    CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), NULL, max_LWS);
     checkClError(error,"clGetKernelWorkGroupInfo");
-    
+
     size_t GWS[2], LWS[2];
     LWS[0] = min((unsigned int)max_LWS[0],min((unsigned int)max_work_item_size[0], height));
     LWS[1] = min((unsigned int)max_LWS[0],min((unsigned int)max_work_item_size[1], width));
@@ -560,28 +560,33 @@ int cleanup()
 
     status = clReleaseMemObject(block_src);
     checkClError(status, "clReleaseMemObject block_src");
-    
+
     status = clReleaseMemObject(block_dst);
     checkClError(status, "clReleaseMemObject block_dst");
 
     status = clReleaseMemObject(cl_luminace_table);
     checkClError(status, "clReleaseMemObject cl_luminace_table");
-    
+
     status = clReleaseMemObject(cl_chrominace_table);
     checkClError(status, "clReleaseMemObject cl_chrominace_table");
-    
-    status = clReleaseMemObject(src_rgb);
-    checkClError(status, "clReleaseMemObject src_rgb");
-	
-    status = clReleaseMemObject(dst_ycbcr);
-    checkClError(status, "clReleaseMemObject dst_ycbcr");    
-    
-    status = clReleaseMemObject(src_ycbcr);
-    checkClError(status, "clReleaseMemObject src_ycbcr");
-	
-    status = clReleaseMemObject(dst_rgb);
-    checkClError(status, "clReleaseMemObject dst_rgb");
 
+    if (src_rgb != NULL) {
+        status = clReleaseMemObject(src_rgb);
+        checkClError(status, "clReleaseMemObject src_rgb");
+    }
+
+    if (dst_ycbcr != NULL) {
+        status = clReleaseMemObject(dst_ycbcr);
+        checkClError(status, "clReleaseMemObject dst_ycbcr");
+    }
+    if (src_ycbcr != NULL) {
+        status = clReleaseMemObject(src_ycbcr);
+        checkClError(status, "clReleaseMemObject src_ycbcr");
+    }
+    if (dst_rgb != NULL) {
+        status = clReleaseMemObject(dst_rgb);
+        checkClError(status, "clReleaseMemObject dst_rgb");
+    }
     status = clReleaseCommandQueue(queue);
     checkClError(status, "clReleaseCommandQueue.");
 
